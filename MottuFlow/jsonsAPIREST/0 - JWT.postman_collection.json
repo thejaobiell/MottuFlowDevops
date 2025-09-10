@@ -1,0 +1,54 @@
+{
+	"info": {
+		"_postman_id": "645c7624-b48b-4b4c-9936-0cd1da4cafdd",
+		"name": "0 - JWT",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39334205",
+		"_collection_link": "https://galactic-resonance-365575.postman.co/workspace/MottuFlow-Endpoints~479ea491-7731-4683-b0a4-56afc7df5c83/collection/39334205-645c7624-b48b-4b4c-9936-0cd1da4cafdd?action=share&source=collection_link&creator=39334205"
+	},
+	"item": [
+		{
+			"name": "Pegar Token JWT",
+			"protocolProfileBehavior": {
+				"followRedirects": true,
+				"disableUrlEncoding": false,
+				"disableCookies": false
+			},
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "User-Agent",
+						"value": "insomnia/11.5.0"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"admin@email.com\",\n  \"senha\": \"adminmottu\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"login"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
