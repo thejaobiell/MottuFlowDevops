@@ -1,28 +1,24 @@
-FROM eclipse-temurin:21-jdk AS jlink
+# Etapa de build
+FROM maven:3.9.11-eclipse-temurin-21 AS builder
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y zip unzip && rm -rf /var/lib/apt/lists/*
+COPY pom.xml mvnw ./
+COPY .mvn .mvn
 
-COPY target/MottuFlow-1.2.jar app.jar
+RUN ./mvnw dependency:go-offline -B
 
-RUN jlink \
-    --output /jre \
-    --add-modules java.base,java.compiler,java.datatransfer,java.desktop,java.instrument,java.logging,java.management,java.management.rmi,java.naming,java.rmi,java.scripting,java.security.jgss,java.sql,java.transaction.xa,java.xml,java.xml.crypto,jdk.crypto.cryptoki,jdk.crypto.ec,jdk.httpserver,jdk.management,jdk.management.agent,jdk.unsupported \
-    --compress 2 \
-    --no-header-files \
-    --no-man-pages
+COPY src ./src
+RUN ./mvnw package -DskipTests -B
 
-FROM debian:bookworm-slim
+FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app
 
-COPY --from=jlink /jre /opt/jre
-
-COPY --from=jlink /app/app.jar /app/app.jar
-
-ENV PATH="/opt/jre/bin:$PATH"
+COPY --from=builder /app/target/MottuFlow-*.jar mottuflow.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UnlockExperimentalVMOptions -XX:+UseZGC"
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar mottuflow.jar"]
