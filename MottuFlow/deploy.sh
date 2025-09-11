@@ -9,7 +9,8 @@ TAG="v1"
 DB_CONTAINER="aci-db-cp4-rm${RM}"
 APP_CONTAINER="aci-app-cp4-rm${RM}"
 LOCATION="brazilsouth"
-DB_PASS="RM#${RM}"
+DB_USER="rm554874"
+DB_PASS="Mottuflow#"
 
 echo "* Login no Azure..."
 az account show > /dev/null 2>&1 || az login
@@ -29,12 +30,11 @@ az container create \
   --memory 1.5 \
   --dns-name-label "${DB_CONTAINER}-dns" \
   --ip-address public \
-  --environment-variables MYSQL_ROOT_PASSWORD="$DB_PASS" MYSQL_DATABASE=mottuflow MYSQL_USER=user MYSQL_PASSWORD="$DB_PASS" \
+  --environment-variables MYSQL_ROOT_PASSWORD="$DB_PASS" MYSQL_DATABASE=mottuflow MYSQL_USER="$DB_USER" MYSQL_PASSWORD="$DB_PASS" \
   --restart-policy Always \
   --location "$LOCATION"
 
 DB_IP=$(az container show --resource-group "$RG" --name "$DB_CONTAINER" --query ipAddress.ip -o tsv)
-echo "📦 DB rodando em: $DB_IP"
 
 az container show --resource-group "$RG" --name "$APP_CONTAINER" > /dev/null 2>&1 || \
 az container create \
@@ -47,13 +47,18 @@ az container create \
   --memory 1.5 \
   --dns-name-label "${APP_CONTAINER}-dns" \
   --ip-address public \
-  --environment-variables DB_HOST="$DB_IP" DB_PORT=3306 DB_NAME=mottuflow DB_USER=user DB_PASSWORD="$DB_PASS" SERVER_PORT=8080 \
+  --environment-variables DB_HOST="$DB_IP" DB_PORT=3306 DB_NAME=mottuflow DB_USER="$DB_USER" DB_PASSWORD="$DB_PASS" SERVER_PORT=8080 \
   --registry-login-server "$LOGIN_SERVER" \
   --registry-username "$REG_USER" \
   --registry-password "$REG_PASS" \
   --restart-policy Always \
   --location "$LOCATION"
 
-
 APP_FQDN=$(az container show --resource-group "$RG" --name "$APP_CONTAINER" --query ipAddress.fqdn -o tsv)
+echo " --------------- " 
+echo "DB rodando em: $DB_IP"
+echo "Usuario: $DB_USER"
+echo "Senha: $DB_PASS"
+echo "               "
 echo "🚀 App acessível em: http://$APP_FQDN:8080"
+echo " --------------- " 

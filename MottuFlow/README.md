@@ -53,14 +53,11 @@ graph TD
         F --> H[deploy.sh]
         H --> I
     end
-
 ```
-
-
 
 **Stack Tecnológica:**
 - **Backend:** Java 21, Spring Boot, Spring Security
-- **Frontend:** Thymeleaf, Bootstrap, JavaScript
+- **Frontend:** Thymeleaf
 - **Database:** MySQL 8.0
 - **Containerização:** Docker
 - **Cloud:** Microsoft Azure (ACI + ACR)
@@ -142,9 +139,7 @@ Antes de começar, certifique-se de ter instalado:
    
    Após o deploy, o script exibirá:
    ```
-   🎉 Deploy concluído com sucesso!
-   🌐 Aplicação disponível em: http://mottuflow-app-rm554874.brazilsouth.azurecontainer.io:8080
-   ⏱️  Aguarde alguns minutos para inicialização completa...
+   🚀 App acessível em: http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080
    ```
 
 ---
@@ -188,7 +183,7 @@ Antes de começar, certifique-se de ter instalado:
 ✅ Container MySQL criado
 ✅ Container da aplicação criado
 ✅ DNS configurado
-🌐 Aplicação acessível em: http://[FQDN]:8080
+🌐 App acessível em: http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080
 ```
 
 ### 🧹 limpar.sh
@@ -274,28 +269,36 @@ docker-compose down
 4. **Configure o Bearer Token** no environment do Postman:
    - Enviroment: `variavel de ambiente JWT`
    - Variável: `auth.bearerToken`
-   - Valor: `<token-retornado-do-login>`
+   - Valor: `<tokenAcesso>`
 
 ### Exemplo de Uso
 
 ```bash
 # Obter token JWT
-curl -X POST http://[FQDN]:8080/api/login \
+curl -X POST http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080/api/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@email.com","senha":"adminmottu"}'
+  ```
 
+
+
+```bash
 # Listar funcionários (com token)
-curl -X GET http://[FQDN]:8080/api/funcionarios \
-  -H "Authorization: Bearer [SEU_TOKEN]"
+curl -X GET http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080/api/funcionario/listar \
+  -H "Authorization: Bearer [tokenAcesso]"
 ```
+---
+
+# Prints
+
+![Print 1](prints/1.png)
+![Print 2](prints/2.png)
+![Print 3](prints/3.png)
+
 
 ---
 
 ## 🧹 Limpeza de Recursos
-
-### ⚠️ IMPORTANTE: Gestão de Custos
-
-Para evitar cobranças desnecessárias no Azure:
 
 ```bash
 # Após validação, sempre execute:
@@ -312,15 +315,5 @@ Para evitar cobranças desnecessárias no Azure:
 |------|----|
 | **João Gabriel Boaventura Marques e Silva** | 554874 |
 | **Lucas Leal das Chagas** | 551124 |
-
-</div>
-
----
-
-<div align="center">
-
-**🚀 MottuFlow - Transformando o Gerenciamento de Frotas**
-
-*Desenvolvido com ❤️ para FIAP - Checkpoint 4 - DevOps & Cloud*
 
 </div>

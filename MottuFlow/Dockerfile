@@ -10,18 +10,20 @@ RUN ./mvnw dependency:go-offline -B
 COPY src ./src
 RUN ./mvnw package -DskipTests -B
 
-FROM gcr.io/distroless/java21:nonroot AS rodador
+RUN mv target/MottuFlow-*.jar app.jar
 
+FROM gcr.io/distroless/java21:nonroot AS rodador
 WORKDIR /app
 
 ENV DB_HOST=localhost \
     DB_PORT=3306 \
     DB_NAME=mottuflow \
-    DB_USER=usuario \
-    DB_PASSWORD=usuario123 \
+    DB_USER=rm554874 \
+    DB_PASSWORD=Mottuflow# \
     SERVER_PORT=8080
 
-COPY --from=builder /app/target/MottuFlow-*.jar mottuflow.jar
+COPY --from=builder /app/app.jar app.jar
 
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "mottuflow.jar"]
+USER nonroot
+ENTRYPOINT ["java", "-jar", "app.jar"]
