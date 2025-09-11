@@ -17,7 +17,11 @@ az container create \
   --image mysql:8.0 \
   --ports 3306 \
   --environment-variables MYSQL_ROOT_PASSWORD=$DB_PASSWORD MYSQL_DATABASE=mottuflow MYSQL_USER=user MYSQL_PASSWORD=$DB_PASSWORD \
-  --restart-policy Always
+  --restart-policy Always \
+  --dns-name-label ${DB_CONTAINER}-dns
+
+echo "MYSQL INICIALIZANDO, AGUARDE..."
+sleep 30
 
 DB_IP=$(az container show --resource-group $RG --name $DB_CONTAINER --query ipAddress.ip --output tsv)
 
@@ -30,4 +34,5 @@ az container create \
   --registry-login-server $ACR_NAME.azurecr.io \
   --registry-username $(az acr credential show --name $ACR_NAME --query username -o tsv) \
   --registry-password $(az acr credential show --name $ACR_NAME --query passwords[0].value -o tsv) \
-  --restart-policy Always
+  --restart-policy Always \
+  --dns-name-label ${APP_CONTAINER}-dns
