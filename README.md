@@ -108,6 +108,27 @@ http://<FQDN>:8080
 
 ---
 
+### 🔑 Acesso à aplicação Thymeleaf
+
+* **Email:** `admin@email.com`
+* **Senha:** `adminmottu`
+
+Acesse diretamente pelo navegador usando o FQDN da aplicação.
+
+---
+
+### ⚡ Utilizando a aplicação como API REST
+
+1. Abra o **Postman**.
+2. Importe todos os endpoints da pasta `jsonsAPIREST`.
+3. No endpoint `0 - JWT`, execute **POST - Pegar Token JWT** usando as mesmas credenciais do Thymeleaf.
+4. Copie o **Token de Acesso** gerado.
+5. Vá para **Environments** no Postman.
+6. Na variável de ambiente `auth.bearerToken`, substitua o valor existente pelo **Token de Acesso** que você copiou.
+7. Agora você pode testar todos os endpoints protegidos com autenticação JWT.
+
+---
+
 ## 🧹 Limpeza dos Recursos
 
 Após validar o funcionamento, execute:
