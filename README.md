@@ -311,9 +311,10 @@ curl -X GET http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080/a
 
 <div align="center">
 
-| Nome | RM |
-|------|----|
-| **João Gabriel Boaventura Marques e Silva** | 554874 |
-| **Lucas Leal das Chagas** | 551124 |
+| Nome | RM | Turma |
+|------|----|-------|
+| **João Gabriel Boaventura Marques e Silva** | 554874 | 2TDSB-2025
+| **Lucas Leal das Chagas** | 551124 | 2TDSB-2025
+| **Leo Mota Lima** | 557851 | 2TDSB-2025
 
 </div>
