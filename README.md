@@ -122,7 +122,7 @@ Antes de começar, certifique-se de ter instalado:
 
 2. **Clone do repositório:**
    ```bash
-   git clone https://github.com/fiap-2tds-dtcc-fev25/2tdsb-cp4-cp4-joaogabriel-lucasleal
+   git clone https://github.com/thejaobiell/MottuFlowDevops
    cd MottuFlowDevops/MottuFlow
    ```
 
@@ -159,7 +159,7 @@ Antes de começar, certifique-se de ter instalado:
    
    Após o deploy, o script exibirá:
    ```
-   🚀 App acessível em: http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080
+   🚀 App acessível em: http://mottuflow-app-dns-554874.brazilsouth.azurecontainer.io:8080/api
    ```
 
 ---
@@ -203,7 +203,7 @@ Antes de começar, certifique-se de ter instalado:
 ✅ Container MySQL criado
 ✅ Container da aplicação criado
 ✅ DNS configurado
-🌐 App acessível em: http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080
+🚀 App acessível em: http://mottuflow-app-dns-554874.brazilsouth.azurecontainer.io:8080/api
 ```
 
 ### 🧹 limpar.sh
@@ -236,36 +236,6 @@ Antes de começar, certifique-se de ter instalado:
    - Gestão de funcionários
    - Controle de pátios e motos
 
-### 📱 Desenvolvimento Local
-
-Para testes locais:
-
-1. Crie um arquivo `.env` e coloque isso dentro:
-```bash
-  DB_ROOT_PASSWORD=root
-  DB_HOST=db
-  DB_PORT=3306
-  DB_NAME=mottuflow
-  DB_USER=usuario
-  DB_PASSWORD=usuario123
-  SERVER_PORT=8080
-```
-
-2. No terminal rode este comando:
-```bash
-# Subir ambiente local
-docker-compose up -d
-```
-
-3. Acessar aplicação
-[http://localhost:8080](http://localhost:8080)
-
-
-4. Após a utilização rode este comando
-```bash
-docker-compose down
-```
-
 ---
 
 ## 🔌 API REST
@@ -295,7 +265,7 @@ docker-compose down
 
 ```bash
 # Obter token JWT
-curl -X POST http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080/api/login \
+curl -X POST http://mottuflow-app-dns-554874.brazilsouth.azurecontainer.io:8080/api/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@email.com","senha":"adminmottu"}'
   ```
@@ -304,7 +274,7 @@ curl -X POST http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080/
 
 ```bash
 # Listar funcionários (com token)
-curl -X GET http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080/api/funcionario/listar \
+curl -X GET http://mottuflow-app-dns-554874.brazilsouth.azurecontainer.io:8080/api/funcionario/listar \
   -H "Authorization: Bearer [tokenAcesso]"
 ```
 ---
