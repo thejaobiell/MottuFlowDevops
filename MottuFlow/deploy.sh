@@ -63,6 +63,7 @@ echo " --------------- "
 echo "DB rodando em: $DB_IP"
 echo "Usuário: $DB_USER"
 echo "Senha: $DB_PASS"
+echo "Banco de dados: mottuflow"
 echo
 echo "🚀 App acessível em: http://$APP_FQDN:8080"
 echo " --------------- "
