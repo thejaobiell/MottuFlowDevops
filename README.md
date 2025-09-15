@@ -84,6 +84,18 @@ mottuflow/
 
 ---
 
+## Banco de Dados
+
+O projeto utiliza **Flyway** para versionamento e migração do banco.  
+As migrations estão em `src/main/resources/db/migration/` (arquivos `V1__...sql`, `V2__...sql`, etc).  
+Esses arquivos são executados automaticamente pelo Flyway no deploy da aplicação.
+
+Além disso, existe um arquivo `src/main/resources/db/script_bd.sql` que contém **todas as tabelas e inserts consolidados**.  
+⚠️ Esse arquivo **não é executado pelo Flyway**.
+
+
+---
+
 ## 🛠️ Pré-requisitos
 
 Antes de começar, certifique-se de ter instalado:
