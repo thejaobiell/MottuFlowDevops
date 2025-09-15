@@ -96,6 +96,9 @@ Esses arquivos são executados automaticamente pelo Flyway no deploy da aplicaç
 Além disso, existe um arquivo `src/main/resources/db/script_bd.sql` que contém **todas as tabelas e inserts consolidados**.  
 ⚠️ Esse arquivo **não é executado pelo Flyway**.
 
+---
+
+[![Ver demonstração no YouTube](https://img.shields.io/badge/YouTube-Ver%20Demonstração-red?style=for-the-badge&logo=youtube)](https://www.youtube.com/watch?v=bszJ3kT55PI)
 
 ---
 
