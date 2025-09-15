@@ -307,15 +307,6 @@ curl -X GET http://aci-app-cp4-rm554874-dns.brazilsouth.azurecontainer.io:8080/a
 ```
 ---
 
-# Prints
-
-![Print 1](MottuFlow/prints/1.png)
-![Print 2](MottuFlow/prints/2.png)
-![Print 3](MottuFlow/prints/3.png)
-
-
----
-
 ## 🧹 Limpeza de Recursos
 
 ```bash
