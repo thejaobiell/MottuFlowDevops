@@ -21,10 +21,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/localidades")
 public class LocalidadeRestController {
 	
-	private final LocalidadeService service;
+	private final LocalidadeService lS;
 	
-	public LocalidadeRestController(LocalidadeService service) {
-		this.service = service;
+	public LocalidadeRestController(LocalidadeService lS ) {
+		this.lS = lS;
 	}
 	
 	private LocalidadeDTO paraDTO(Localidade localidade) {
@@ -65,44 +65,52 @@ public class LocalidadeRestController {
 	
 	@GetMapping("/listar")
 	public List<LocalidadeDTO> listarRest() {
-		return service.listarLocalidades().stream().map(this::paraDTO).collect(Collectors.toList());
+		return lS.listarLocalidades().stream().map(this::paraDTO).collect(Collectors.toList());
 	}
 	
 	@GetMapping("/buscar-por-id/{id}")
 	public ResponseEntity<LocalidadeDTO> buscarPorIdRest(@PathVariable Long id) {
-		Localidade localidade = service.buscarLocalidadePorId(id);
+		Localidade localidade = lS.buscarLocalidadePorId(id);
 		return ResponseEntity.ok(paraDTO(localidade));
 	}
 	
 	@GetMapping("/buscar-por-ponto-referencia/{ponto}")
 	public List<LocalidadeDTO> buscarPorPontoReferenciaRest(@PathVariable String ponto) {
-		return service.buscarPorPontoReferencia(ponto).stream().map(this::paraDTO).collect(Collectors.toList());
+		return lS.buscarPorPontoReferencia(ponto).stream().map(this::paraDTO).collect(Collectors.toList());
 	}
 	
 	@GetMapping("/buscar-por-periodo")
 	public List<LocalidadeDTO> buscarPorPeriodoRest(
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataInicio,
 			@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dataFim) {
-		return service.buscarPorIntervaloData(dataInicio, dataFim).stream().map(this::paraDTO).collect(Collectors.toList());
+		return lS.buscarPorIntervaloData(dataInicio, dataFim).stream().map(this::paraDTO).collect(Collectors.toList());
+	}
+	
+	@GetMapping("/buscar-por-patio/{idPatio}")
+	public List<LocalidadeDTO> buscarPorPatioRest(@PathVariable Long idPatio) {
+		return lS.buscarPorPatio(idPatio)
+				.stream()
+				.map(this::paraDTO)
+				.collect(Collectors.toList());
 	}
 	
 	@PostMapping("/cadastrar")
 	public ResponseEntity<LocalidadeDTO> cadastrarRest(@RequestBody @Valid LocalidadeDTO dto) {
 		Localidade localidade = paraEntity(dto);
-		Localidade salvo = service.cadastrarLocalidade(localidade);
+		Localidade salvo = lS.cadastrarLocalidade(localidade);
 		return ResponseEntity.ok(paraDTO(salvo));
 	}
 	
 	@PutMapping("/editar/{id}")
 	public ResponseEntity<LocalidadeDTO> editarRest(@PathVariable Long id, @RequestBody LocalidadeDTO dto) {
 		Localidade localidade = paraEntity(dto);
-		Localidade atualizado = service.editarLocalidade(id, localidade);
+		Localidade atualizado = lS.editarLocalidade(id, localidade);
 		return ResponseEntity.ok(paraDTO(atualizado));
 	}
 	
 	@DeleteMapping("/deletar/{id}")
 	public ResponseEntity<Void> deletarRest(@PathVariable Long id) {
-		service.deletarLocalidade(id);
+		lS.deletarLocalidade(id);
 		return ResponseEntity.noContent().build();
 	}
 }

@@ -16,52 +16,57 @@ import java.util.List;
 @Service
 public class LocalidadeService {
 	
-	private final LocalidadeRepository repository;
-	private final MotoRepository motoRepository;
-	private final PatioRepository patioRepository;
-	private final CameraRepository cameraRepository;
+	private final LocalidadeRepository lR;
+	private final MotoRepository mR;
+	private final PatioRepository pR;
+	private final CameraRepository cR;
 	
-	public LocalidadeService(LocalidadeRepository repository, MotoRepository motoRepository,
-	                         PatioRepository patioRepository, CameraRepository cameraRepository) {
-		this.repository = repository;
-		this.motoRepository = motoRepository;
-		this.patioRepository = patioRepository;
-		this.cameraRepository = cameraRepository;
+	public LocalidadeService( LocalidadeRepository lR, MotoRepository mR,
+	                          PatioRepository pR, CameraRepository cR ) {
+		this.lR = lR;
+		this.mR = mR;
+		this.pR = pR;
+		this.cR = cR;
 	}
 	
 	public List<Localidade> listarLocalidades() {
-		return repository.findAll();
+		return lR.findAll();
 	}
 	
 	public Localidade buscarLocalidadePorId(Long id) {
-		return repository.findById(id)
+		return lR.findById(id)
 				.orElseThrow(() -> new RegraDeNegocioException("Localidade não encontrada com id: " + id));
 	}
 	
 	public List<Localidade> buscarPorPontoReferencia(String ponto) {
-		return repository.findByPontoReferencia(ponto);
+		return lR.findByPontoReferencia(ponto);
 	}
 	
 	public List<Localidade> buscarPorIntervaloData(LocalDateTime dataInicio, LocalDateTime dataFim) {
-		return repository.findDatas(dataInicio, dataFim);
+		return lR.findDatas(dataInicio, dataFim);
 	}
+	
+	public List<Localidade> buscarPorPatio(Long idPatio) {
+		return lR.findByPatio(idPatio);
+	}
+	
 	
 	@Transactional
 	public Localidade cadastrarLocalidade(Localidade localidade) {
-		Moto moto = motoRepository.findById(localidade.getMoto().getIdMoto())
+		Moto moto = mR.findById(localidade.getMoto().getIdMoto())
 				.orElseThrow(() -> new RegraDeNegocioException("Moto não encontrada com id: " + localidade.getMoto().getIdMoto()));
 		
-		Patio patio = patioRepository.findById(localidade.getPatio().getIdPatio())
+		Patio patio = pR.findById(localidade.getPatio().getIdPatio())
 				.orElseThrow(() -> new RegraDeNegocioException("Patio não encontrado com id: " + localidade.getPatio().getIdPatio()));
 		
-		Camera camera = cameraRepository.findById(localidade.getCamera().getIdCamera())
+		Camera camera = cR.findById(localidade.getCamera().getIdCamera())
 				.orElseThrow(() -> new RegraDeNegocioException("Camera não encontrada com id: " + localidade.getCamera().getIdCamera()));
 		
 		localidade.setMoto(moto);
 		localidade.setPatio(patio);
 		localidade.setCamera(camera);
 		
-		return repository.save(localidade);
+		return lR.save(localidade);
 	}
 	
 	@Transactional
@@ -77,32 +82,32 @@ public class LocalidadeService {
 		}
 		
 		if (localidadeAtualizada.getMoto() != null && localidadeAtualizada.getMoto().getIdMoto() != null) {
-			Moto moto = motoRepository.findById(localidadeAtualizada.getMoto().getIdMoto())
+			Moto moto = mR.findById(localidadeAtualizada.getMoto().getIdMoto())
 					.orElseThrow(() -> new RegraDeNegocioException(
 							"Moto não encontrada com id: " + localidadeAtualizada.getMoto().getIdMoto()));
 			localidade.setMoto(moto);
 		}
 		
 		if (localidadeAtualizada.getPatio() != null && localidadeAtualizada.getPatio().getIdPatio() != null) {
-			Patio patio = patioRepository.findById(localidadeAtualizada.getPatio().getIdPatio())
+			Patio patio = pR.findById(localidadeAtualizada.getPatio().getIdPatio())
 					.orElseThrow(() -> new RegraDeNegocioException(
 							"Patio não encontrado com id: " + localidadeAtualizada.getPatio().getIdPatio()));
 			localidade.setPatio(patio);
 		}
 		
 		if (localidadeAtualizada.getCamera() != null && localidadeAtualizada.getCamera().getIdCamera() != null) {
-			Camera camera = cameraRepository.findById(localidadeAtualizada.getCamera().getIdCamera())
+			Camera camera = cR.findById(localidadeAtualizada.getCamera().getIdCamera())
 					.orElseThrow(() -> new RegraDeNegocioException(
 							"Camera não encontrada com id: " + localidadeAtualizada.getCamera().getIdCamera()));
 			localidade.setCamera(camera);
 		}
 		
-		return repository.save(localidade);
+		return lR.save(localidade);
 	}
 	
 	@Transactional
 	public void deletarLocalidade(Long id) {
 		Localidade localidade = buscarLocalidadePorId(id);
-		repository.delete(localidade);
+		lR.delete(localidade);
 	}
 }

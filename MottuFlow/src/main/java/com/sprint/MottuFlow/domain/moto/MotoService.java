@@ -7,33 +7,55 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MotoService {
 	
-	private final MotoRepository repository;
-	private final PatioRepository patioRepository;
+	private final MotoRepository mR;
+	private final PatioRepository pR;
 	
-	public MotoService(MotoRepository repository, PatioRepository patioRepository) {
-		this.repository = repository;
-		this.patioRepository = patioRepository;
+	public MotoService(MotoRepository mR, PatioRepository pR ) {
+		this.mR = mR;
+		this.pR = pR;
 	}
 	
 	public List<Moto> listarMotos() {
-		return repository.findAll();
+		return mR.findAll();
 	}
 	
 	public Moto buscarMotoPorId(Long id) {
-		return repository.findById(id)
+		return mR.findById(id)
 				.orElseThrow(() -> new RegraDeNegocioException("Moto não encontrada com id: " + id));
 	}
 	
-	public List<Moto> buscarPorFabricante(String fabricante) {
-		return repository.findByFabricante(fabricante);
+	public List<Moto> buscarPorPlaca(String placa) {
+		List<Moto> motos = mR.findByPlacaContaining(placa);
+		if (motos.isEmpty()) {
+			throw new RegraDeNegocioException(
+					"Nenhuma moto encontrada com Placa contendo: " + placa
+			);
+		}
+		return motos;
 	}
 	
+	public List<Moto> buscarPorFabricante(String fabricante) {
+		return mR.findByFabricante(fabricante);
+	}
+	
+	public List<Moto> buscarPorModelo(String modelo) {
+		List<Moto> motos = mR.findByModeloContainingIgnoreCase(modelo);
+		if (motos.isEmpty()) {
+			throw new RegraDeNegocioException(
+					"Nenhuma moto encontrada com modelo contendo: " + modelo
+			);
+		}
+		return motos;
+	}
+	
+	
 	public List<Moto> buscarPorPatioId(long idPatio) {
-		return repository.findByPatioId(idPatio);
+		return mR.findByPatioId(idPatio);
 	}
 	
 	@Transactional
@@ -42,12 +64,12 @@ public class MotoService {
 			throw new RegraDeNegocioException("Pátio é obrigatório!");
 		}
 		
-		Patio patio = patioRepository.findById(moto.getPatio().getIdPatio())
+		Patio patio = pR.findById(moto.getPatio().getIdPatio())
 				.orElseThrow(() -> new RegraDeNegocioException(
 						"Pátio não encontrado com id: " + moto.getPatio().getIdPatio()));
 		moto.setPatio(patio);
 		
-		return repository.save(moto);
+		return mR.save(moto);
 	}
 	
 	@Transactional
@@ -75,18 +97,40 @@ public class MotoService {
 		}
 		
 		if (motoAtualizada.getPatio() != null && motoAtualizada.getPatio().getIdPatio() != null) {
-			Patio patio = patioRepository.findById(motoAtualizada.getPatio().getIdPatio())
+			Patio patio = pR.findById(motoAtualizada.getPatio().getIdPatio())
 					.orElseThrow(() -> new RegraDeNegocioException(
 							"Pátio não encontrado com id: " + motoAtualizada.getPatio().getIdPatio()));
 			moto.setPatio(patio);
 		}
 		
-		return repository.save(moto);
+		return mR.save(moto);
 	}
 	
 	@Transactional
 	public void deletarMoto(Long id) {
 		Moto moto = buscarMotoPorId(id);
-		repository.delete(moto);
+		mR.delete(moto);
+	}
+	
+	@Transactional
+	public List<MotoComTagsDTO> listarMotosComTags() {
+		List<Moto> motos = mR.findAll();
+		
+		return motos.stream().map(moto -> {
+			List<MotoComTagsDTO.ArucoTagInfo> tags = moto.getArucoTags().stream()
+					.map(tag -> new MotoComTagsDTO.ArucoTagInfo(tag.getIdTag(), tag.getCodigo(), tag.getStatus()))
+					.collect( Collectors.toList());
+			
+			return new MotoComTagsDTO(
+					moto.getIdMoto(),
+					moto.getPlaca(),
+					moto.getModelo(),
+					moto.getFabricante(),
+					moto.getAno(),
+					moto.getLocalizacaoAtual(),
+					moto.getPatio().getIdPatio(),
+					tags
+			);
+		}).collect(Collectors.toList());
 	}
 }

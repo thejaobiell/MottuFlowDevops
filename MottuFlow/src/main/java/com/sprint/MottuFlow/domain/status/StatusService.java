@@ -8,36 +8,46 @@ import com.sprint.MottuFlow.domain.moto.MotoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
 public class StatusService {
 	
-	private final StatusRepository repository;
-	private final MotoRepository motoRepository;
-	private final FuncionarioRepository funcionarioRepository;
+	private final StatusRepository sR;
+	private final MotoRepository mR;
+	private final FuncionarioRepository fR;
 	
-	public StatusService(StatusRepository repository, MotoRepository motoRepository, FuncionarioRepository funcionarioRepository) {
-		this.repository = repository;
-		this.motoRepository = motoRepository;
-		this.funcionarioRepository = funcionarioRepository;
+	public StatusService( StatusRepository sR, MotoRepository mR, FuncionarioRepository fR ) {
+		this.sR = sR;
+		this.mR = mR;
+		this.fR = fR;
 	}
 	
 	public List<Status> listarStatus() {
-		return repository.findAll();
+		return sR.findAll();
 	}
 	
 	public Status buscarStatusPorId(Long id) {
-		return repository.findById(id)
+		return sR.findById(id)
 				.orElseThrow(() -> new RegraDeNegocioException("Status não encontrado com id: " + id));
 	}
 	
 	public List<Status> buscarPorTipoStatus(TipoStatus tipoStatus) {
-		return repository.findByTipoStatus(tipoStatus);
+		return sR.findByTipoStatus(tipoStatus);
 	}
 	
 	public List<Status> buscarPorDescricaoStatus(String descricao) {
-		return repository.findByDescricao(descricao);
+		return sR.findByDescricao(descricao);
+	}
+	
+	public List<Status> buscarPorPeriodo(LocalDateTime inicio, LocalDateTime fim) {
+		return sR.findByPeriodo(inicio, fim);
+	}
+	
+	public Status buscarPorMoto(Long idMoto) {
+		return sR.findFirstByMotoIdOrderByDataStatusDesc(idMoto)
+				.orElseThrow(() -> new RegraDeNegocioException("Nenhum registro de status encontrado para a moto com id: " + idMoto));
 	}
 	
 	@Transactional
@@ -49,16 +59,16 @@ public class StatusService {
 			throw new RegraDeNegocioException("Funcionario é obrigatório!");
 		}
 		
-		Moto moto = motoRepository.findById(status.getMoto().getIdMoto())
+		Moto moto = mR.findById(status.getMoto().getIdMoto())
 				.orElseThrow(() -> new RegraDeNegocioException("Moto não encontrada com id: " + status.getMoto().getIdMoto()));
 		
-		Funcionario funcionario = funcionarioRepository.findById(status.getFuncionario().getId_funcionario())
+		Funcionario funcionario = fR.findById(status.getFuncionario().getId_funcionario())
 				.orElseThrow(() -> new RegraDeNegocioException("Funcionario não encontrado com id: " + status.getFuncionario().getId_funcionario()));
 		
 		status.setMoto(moto);
 		status.setFuncionario(funcionario);
 		
-		return repository.save(status);
+		return sR.save(status);
 	}
 	
 	@Transactional
@@ -78,23 +88,23 @@ public class StatusService {
 		}
 		
 		if (statusAtualizado.getMoto() != null && statusAtualizado.getMoto().getIdMoto() != null) {
-			Moto moto = motoRepository.findById(statusAtualizado.getMoto().getIdMoto())
+			Moto moto = mR.findById(statusAtualizado.getMoto().getIdMoto())
 					.orElseThrow(() -> new RegraDeNegocioException("Moto não encontrada com id: " + statusAtualizado.getMoto().getIdMoto()));
 			status.setMoto(moto);
 		}
 		
 		if (statusAtualizado.getFuncionario() != null && statusAtualizado.getFuncionario().getId_funcionario() != null) {
-			Funcionario funcionario = funcionarioRepository.findById(statusAtualizado.getFuncionario().getId_funcionario())
+			Funcionario funcionario = fR.findById(statusAtualizado.getFuncionario().getId_funcionario())
 					.orElseThrow(() -> new RegraDeNegocioException("Funcionario não encontrado com id: " + statusAtualizado.getFuncionario().getId_funcionario()));
 			status.setFuncionario(funcionario);
 		}
 		
-		return repository.save(status);
+		return sR.save(status);
 	}
 	
 	@Transactional
 	public void deletarStatus(Long id) {
 		Status status = buscarStatusPorId(id);
-		repository.delete(status);
+		sR.delete(status);
 	}
 }

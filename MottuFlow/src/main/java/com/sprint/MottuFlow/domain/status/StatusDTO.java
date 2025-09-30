@@ -23,7 +23,6 @@ public class StatusDTO {
 	
 	public StatusDTO() {}
 	
-	// Construtor usando TipoStatus
 	public StatusDTO(Long idStatus, Long idMoto, TipoStatus tipoStatus, String descricao, LocalDateTime dataStatus, Long idFuncionario) {
 		this.idStatus = idStatus;
 		this.idMoto = idMoto;
@@ -33,7 +32,6 @@ public class StatusDTO {
 		this.idFuncionario = idFuncionario;
 	}
 	
-	// Getters e Setters
 	public Long getIdStatus() {
 		return idStatus;
 	}

@@ -17,10 +17,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/aruco-tags")
 public class ArucoTagRestController {
 	
-	private final ArucoTagService service;
+	private final ArucoTagService atS;
 	
-	public ArucoTagRestController(ArucoTagService service) {
-		this.service = service;
+	public ArucoTagRestController(ArucoTagService atS ) {
+		this.atS = atS;
 	}
 	
 	private ArucoTagDTO paraDTO(ArucoTag tag) {
@@ -48,43 +48,43 @@ public class ArucoTagRestController {
 	
 	@GetMapping("/listar")
 	public List<ArucoTagDTO> listarRest() {
-		return service.listarArucoTags().stream().map(this::paraDTO).collect(Collectors.toList());
+		return atS.listarArucoTags().stream().map(this::paraDTO).collect(Collectors.toList());
 	}
 	
 	@GetMapping("/buscar-por-id/{id}")
 	public ResponseEntity<ArucoTagDTO> buscarPorIdRest(@PathVariable Long id) {
-		ArucoTag tag = service.buscarTagPorId(id);
+		ArucoTag tag = atS.buscarTagPorId(id);
 		return ResponseEntity.ok(paraDTO(tag));
 	}
 	
 	@GetMapping("/buscar-por-status/{status}")
 	public List<ArucoTagDTO> buscarPorStatusRest(@PathVariable String status) {
-		return service.buscarPorStatus(status).stream().map(this::paraDTO).collect(Collectors.toList());
+		return atS.buscarPorStatus(status).stream().map(this::paraDTO).collect(Collectors.toList());
 	}
 	
 	@GetMapping("/buscar-por-codigo/{codigo}")
 	public ResponseEntity<ArucoTagDTO> buscarPorCodigoRest(@PathVariable String codigo) {
-		ArucoTag tag = service.buscarPorCodigo(codigo);
+		ArucoTag tag = atS.buscarPorCodigo(codigo);
 		return ResponseEntity.ok(paraDTO(tag));
 	}
 	
 	@PostMapping("/cadastrar")
 	public ResponseEntity<ArucoTagDTO> cadastrarRest(@RequestBody @Valid ArucoTagDTO dto) {
 		ArucoTag tag = paraEntity(dto);
-		ArucoTag salvo = service.cadastrarTag(tag);
+		ArucoTag salvo = atS.cadastrarTag(tag);
 		return ResponseEntity.ok(paraDTO(salvo));
 	}
 	
 	@PutMapping("/editar/{id}")
 	public ResponseEntity<ArucoTagDTO> editarRest(@PathVariable Long id, @RequestBody ArucoTagDTO dto) {
 		ArucoTag tag = paraEntity(dto);
-		ArucoTag atualizado = service.editarTag(id, tag);
+		ArucoTag atualizado = atS.editarTag(id, tag);
 		return ResponseEntity.ok(paraDTO(atualizado));
 	}
 	
 	@DeleteMapping("/deletar/{id}")
 	public ResponseEntity<Void> deletarRest(@PathVariable Long id) {
-		service.deletarTag(id);
+		atS.deletarTag(id);
 		return ResponseEntity.noContent().build();
 	}
 }

@@ -14,5 +14,7 @@ public interface LocalidadeRepository extends JpaRepository<Localidade, Long> {
     @Query("SELECT l FROM Localidade l WHERE l.dataHora >= :dataInicio AND l.dataHora <= :dataFim")
     List<Localidade> findDatas(@Param("dataInicio") java.time.LocalDateTime dataInicio,
                                       @Param("dataFim") java.time.LocalDateTime dataFim);
-
+	
+	@Query("SELECT l FROM Localidade l WHERE l.patio.idPatio = :idPatio")
+	List<Localidade> findByPatio(@Param("idPatio") Long idPatio);
 }

@@ -13,4 +13,10 @@ public interface MotoRepository extends JpaRepository<Moto, Long> {
     
     @Query(value = "SELECT * FROM moto WHERE id_patio = :idPatio", nativeQuery = true)
     List<Moto> findByPatioId(@Param("idPatio") long idPatio);
+	
+	@Query("SELECT m FROM Moto m WHERE LOWER(m.placa) LIKE LOWER(CONCAT('%', :placa, '%'))")
+	List<Moto> findByPlacaContaining(@Param("placa") String placa);
+	
+	@Query("SELECT m FROM Moto m WHERE LOWER(m.modelo) LIKE LOWER(CONCAT('%', :modelo, '%'))")
+	List<Moto> findByModeloContainingIgnoreCase(@Param("modelo") String modelo);
 }

@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,10 +21,10 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/status")
 public class StatusRestController {
 	
-	private final StatusService service;
+	private final StatusService sS;
 	
-	public StatusRestController(StatusService service) {
-		this.service = service;
+	public StatusRestController(StatusService sS ) {
+		this.sS = sS;
 	}
 	
 	private StatusDTO paraDTO(Status status) {
@@ -61,14 +62,14 @@ public class StatusRestController {
 	
 	@GetMapping("/listar")
 	public List<StatusDTO> listarRest() {
-		return service.listarStatus()
+		return sS.listarStatus()
 				.stream().map(this::paraDTO)
 				.collect(Collectors.toList());
 	}
 	
 	@GetMapping("/buscar-por-id/{id}")
 	public ResponseEntity<StatusDTO> buscarPorIdRest(@PathVariable Long id) {
-		Status status = service.buscarStatusPorId(id);
+		Status status = sS.buscarStatusPorId(id);
 		return ResponseEntity.ok(paraDTO(status));
 	}
 	
@@ -80,35 +81,52 @@ public class StatusRestController {
 		} catch (IllegalArgumentException e) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "TipoStatus inválido: " + tipoStatus);
 		}
-		return service.buscarPorTipoStatus(tipo)
+		return sS.buscarPorTipoStatus(tipo)
 				.stream().map(this::paraDTO)
 				.collect(Collectors.toList());
 	}
 	
 	@GetMapping("/buscar-por-descricao")
 	public List<StatusDTO> buscarPorDescricaoRest(@RequestParam String descricao) {
-		return service.buscarPorDescricaoStatus(descricao)
+		return sS.buscarPorDescricaoStatus(descricao)
 				.stream().map(this::paraDTO)
 				.collect(Collectors.toList());
+	}
+	
+	@GetMapping("/buscar-por-periodo")
+	public List<StatusDTO> buscarPorPeriodo(@RequestParam String inicio, @RequestParam String fim) {
+		LocalDateTime dataInicio = LocalDateTime.parse(inicio);
+		LocalDateTime dataFim = LocalDateTime.parse(fim);
+		
+		return sS.buscarPorPeriodo(dataInicio, dataFim)
+				.stream().map(this::paraDTO)
+				.collect(Collectors.toList());
+	}
+	
+	
+	@GetMapping("/buscar-por-moto/{idMoto}")
+	public ResponseEntity<StatusDTO> buscarPorMoto(@PathVariable Long idMoto) {
+		Status status = sS.buscarPorMoto(idMoto);
+		return ResponseEntity.ok(paraDTO(status));
 	}
 	
 	@PostMapping("/cadastrar")
 	public ResponseEntity<StatusDTO> cadastrarRest(@RequestBody @Valid StatusDTO dto) {
 		Status status = paraEntity(dto);
-		Status salvo = service.cadastrarStatus(status);
+		Status salvo = sS.cadastrarStatus(status);
 		return ResponseEntity.status(HttpStatus.CREATED).body(paraDTO(salvo));
 	}
 	
 	@PutMapping("/editar/{id}")
 	public ResponseEntity<StatusDTO> editarRest(@PathVariable Long id, @RequestBody @Valid StatusDTO dto) {
 		Status atualizado = paraEntity(dto);
-		Status updated = service.editarStatus(id, atualizado);
+		Status updated = sS.editarStatus(id, atualizado);
 		return ResponseEntity.ok(paraDTO(updated));
 	}
 	
 	@DeleteMapping("/deletar/{id}")
 	public ResponseEntity<Void> deletarRest(@PathVariable Long id) {
-		service.deletarStatus(id);
+		sS.deletarStatus(id);
 		return ResponseEntity.noContent().build();
 	}
 }

@@ -14,6 +14,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestController
 @RequestMapping( "/api" )
@@ -36,29 +37,41 @@ public class AutenticacaoRestController {
 		
 		var funcionario = (Funcionario) authentication.getPrincipal();
 		
-		// gerar tokens
 		String tokenAcesso = tS.gerarToken( funcionario );
 		String refreshToken = tS.gerarRefreshToken( funcionario );
-		LocalDateTime expiracaoRefresh = LocalDateTime.now().plusMinutes( 120 );
+		LocalDateTime expiracaoRefresh = LocalDateTime.now().plusMinutes( 10080 );
 		
-		// salvar refresh token no banco
 		fS.atualizarRefreshTokenFuncionario( funcionario, refreshToken, expiracaoRefresh );
 		
-		return ResponseEntity.ok( new DadosToken( tokenAcesso, refreshToken ) );
+		return ResponseEntity.ok( new DadosToken( tokenAcesso, refreshToken, expiracaoRefresh ) );
 	}
 	
 	@PostMapping( "/atualizar-token" )
 	public ResponseEntity<DadosToken> atualizarToken( @Valid @RequestBody DadosRefreshToken dados ) {
 		Funcionario funcionario = fS.validarRefreshTokenFuncionario( dados.refreshToken() );
 		
-		// gerar novos tokens
 		String tokenAcesso = tS.gerarToken( funcionario );
-		String novoRefreshToken = tS.gerarRefreshToken( funcionario );
-		LocalDateTime expiracaoRefresh = LocalDateTime.now().plusMinutes( 120 );
 		
-		// atualizar refresh token no banco
-		fS.atualizarRefreshTokenFuncionario( funcionario, novoRefreshToken, expiracaoRefresh );
+		String refreshTokenExistente = funcionario.getRefreshToken();
+		LocalDateTime expiracaoRefresh = funcionario.getExpiracaoRefreshToken();
 		
-		return ResponseEntity.ok( new DadosToken( tokenAcesso, novoRefreshToken ) );
+		return ResponseEntity.ok(new DadosToken(tokenAcesso, refreshTokenExistente, expiracaoRefresh));
 	}
+	
+	@PostMapping("/verificar-jwt")
+	public ResponseEntity<String> verificarJwt(@RequestBody Map<String, String> body) {
+		String tokenAcesso = body.get("tokenAcesso");
+		if (tokenAcesso == null || tokenAcesso.isEmpty()) {
+			return ResponseEntity.badRequest().body("Token não fornecido");
+		}
+		
+		boolean expirado = tS.isJwtExpired(tokenAcesso);
+		if (expirado) {
+			return ResponseEntity.ok("JWT expirado");
+		} else {
+			return ResponseEntity.ok("JWT ainda válido");
+		}
+	}
+	
+	
 }

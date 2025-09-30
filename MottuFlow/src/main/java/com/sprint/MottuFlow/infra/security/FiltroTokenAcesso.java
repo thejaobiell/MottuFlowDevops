@@ -27,14 +27,15 @@ public class FiltroTokenAcesso extends OncePerRequestFilter {
 	}
 	
 	@Override
-	protected void doFilterInternal( HttpServletRequest request, HttpServletResponse response,
-	                                 FilterChain filterChain ) throws ServletException, IOException {
+	protected void doFilterInternal( HttpServletRequest request, HttpServletResponse response, FilterChain filterChain ) throws ServletException, IOException {
+
 		String token = recuperarTokenRequisicao( request );
 		
 		if ( token != null ) {
 			try {
 				String usuario = tokenService.getSubject( token );
-				Funcionario funcionario = funcionarioRepository.findByEmailIgnoreCase( usuario ).orElseThrow();
+				Funcionario funcionario = funcionarioRepository.findByEmailIgnoreCase( usuario )
+						.orElseThrow( () -> new RuntimeException( "Usuário não encontrado" ) );
 				
 				Authentication authentication = new UsernamePasswordAuthenticationToken( funcionario, null, funcionario.getAuthorities() );
 				SecurityContextHolder.getContext().setAuthentication( authentication );

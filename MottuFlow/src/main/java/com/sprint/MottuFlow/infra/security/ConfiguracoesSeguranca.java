@@ -26,41 +26,34 @@ public class ConfiguracoesSeguranca {
 		this.filtroTokenAcesso = filtroTokenAcesso;
 	}
 	
+	// ------------------ API REST ------------------
 	@Bean
 	@Order(1)
-	/*
-	 - Filtros de Segurança para a APIREST
-	    - Ela permite qualquer um acessar a urls /login e /atualizar-token
-	*/
-	public SecurityFilterChain apiRestSecurity( HttpSecurity http ) throws Exception {
+	public SecurityFilterChain apiRestSecurity(HttpSecurity http) throws Exception {
 		return http
-				.securityMatcher( "/api/**" )
+				.securityMatcher("/api/**")
+				.csrf(AbstractHttpConfigurer::disable)
+				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
-						.requestMatchers("/api/login", "/api/atualizar-token").permitAll()
+						.requestMatchers("/api/login", "/api/atualizar-token", "/api/verificar-jwt").permitAll()
 						.anyRequest().authenticated()
 				)
-				.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-				.csrf(AbstractHttpConfigurer::disable)
 				.addFilterBefore(filtroTokenAcesso, UsernamePasswordAuthenticationFilter.class)
 				.build();
 	}
 	
-	/*
-	 - Filtros de Segurança para Thymeleaf
-	*/
+	// ------------------ Web / Thymeleaf ------------------
 	@Bean
 	@Order(2)
 	public SecurityFilterChain webSecurity(HttpSecurity http) throws Exception {
 		return http
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
+						.requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
 						.requestMatchers("/login").permitAll()
-						
 						.requestMatchers("/", "/menu", "/perfil").authenticated()
-						
 						.requestMatchers("/motos/**", "/arucotags/**", "/localidades/**", "/status/**")
 						.hasRole("MECANICO")
-						
 						.anyRequest().hasAnyRole("GERENTE", "ADMIN")
 				)
 				.formLogin(form -> form
@@ -81,14 +74,13 @@ public class ConfiguracoesSeguranca {
 	}
 	
 	@Bean
-	//Encriptador de senhas
 	public PasswordEncoder encriptador() {
 		return new BCryptPasswordEncoder();
 	}
 	
 	@Bean
-	public AuthenticationManager authenticationManager( AuthenticationConfiguration authenticationConfiguration ) throws Exception {
-		return authenticationConfiguration.getAuthenticationManager();
+	public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
+		return authConfig.getAuthenticationManager();
 	}
 	
 	@Bean

@@ -109,9 +109,11 @@ public class FuncionarioService implements UserDetailsService {
 	@Transactional
 	public void alterarSenha(String email, String senhaAtual, String novaSenha) {
 		Funcionario funcionario = buscarFuncionarioPorEmail(email);
+		
 		if (!encoder.matches(senhaAtual, funcionario.getSenha())) {
 			throw new RegraDeNegocioException("Senha atual incorreta!");
 		}
+		
 		funcionario.setSenha(encoder.encode(novaSenha));
 		repository.save(funcionario);
 	}

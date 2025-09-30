@@ -35,7 +35,6 @@ public class CameraService {
 		return cR.findByLocalizacaoFisica( localizacao );
 	}
 	
-	
 	public Camera cadastrarCamera( Camera camera ) {
 		Patio patio = pR.findById( camera.getPatio().getIdPatio() ).orElseThrow( () -> new RegraDeNegocioException( "Patio não encontrado com id: " + camera.getPatio().getIdPatio() ) );
 		camera.setPatio( patio );

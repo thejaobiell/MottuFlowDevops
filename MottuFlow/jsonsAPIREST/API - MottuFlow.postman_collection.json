@@ -18,20 +18,14 @@
 						"disableCookies": false
 					},
 					"request": {
+						"auth": {
+							"type": "noauth"
+						},
 						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "User-Agent",
-								"value": "insomnia/11.5.0"
-							}
-						],
+						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin@email.com\",\n  \"senha\": \"adminmottu\"\n}\n",
+							"raw": "{\n    \"email\": \"admin@email.com\",\n    \"senha\": \"adminmottu\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -49,6 +43,83 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Atualizar Token JWT",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refreshToken\": \"substitua este texto\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/atualizar-token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"atualizar-token"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Verificar se JWT de acesso está ativo",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"tokenAcesso\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJNb3R0dUZsb3ciLCJzdWIiOiJhZG1pbkBlbWFpbC5jb20iLCJleHAiOjE3NTg1OTQyNjN9.uyRgMo9nGf6DWMC-WnE4eFukjqCvqfVrSSKT3yMj1qo\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/verificar-jwt",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"verificar-jwt"
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "noauth"
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"packages": {},
+						"exec": [
+							""
+						]
+					}
 				}
 			]
 		},
@@ -183,10 +254,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"nome\": \"Novo Funcionário\",\n  \"cpf\": \"333.333.333-33\",\n  \"cargo\": \"MECANICO\",\n  \"telefone\": \"(33) 33333-3333\",\n  \"email\": \"novo@email.com\",\n  \"senha\": \"senha123\"\n}\n",
+							"raw": "{\n    \"nome\": \"Novo Funcionário\",\n    \"cpf\": \"333.333.333-33\",\n    \"cargo\": \"MECANICO\",\n    \"telefone\": \"(33) 33333-3333\",\n    \"email\": \"novo@email.com\",\n    \"senha\": \"senha123\"\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -230,10 +301,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"id\": 2,\n  \"nome\": \"João Mecânico Atualizado\",\n  \"cpf\": \"111.111.111-11\",\n  \"cargo\": \"MECANICO\",\n  \"telefone\": \"(11) 11111-1111\",\n  \"email\": \"joao@email.com\",\n  \"senha\": \"novaSenha123\"\n}\n",
+							"raw": "{\n    \"id\": 2,\n    \"nome\": \"João Mecânico Atualizado\",\n    \"cpf\": \"111.111.111-11\",\n    \"cargo\": \"MECANICO\",\n    \"telefone\": \"(11) 11111-1111\",\n    \"email\": \"joao@email.com\",\n    \"senha\": \"novaSenha123\"\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -246,6 +317,33 @@
 								"funcionario",
 								"editar",
 								"2"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Alterar Senha Funcionario",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"admin@email.com\",\n    \"senhaAtual\": \"adminmottu\",\n    \"novaSenha\": \"mottuadmin\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/funcionario/alterar-senha",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"funcionario",
+								"alterar-senha"
 							]
 						}
 					},
@@ -416,10 +514,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"nome\": \"Patio AlfaBeta\",\n  \"endereco\": \"Rua Principal, 123\",\n  \"capacidadeMaxima\": 500\n}",
+							"raw": "{\n    \"nome\": \"Patio AlfaBeta\",\n    \"endereco\": \"Rua Principal, 123\",\n    \"capacidadeMaxima\": 500\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -463,10 +561,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"nome\": \"Patio Atualizado\",\n  \"endereco\": \"Rua Nova, 456\",\n  \"capacidadeMaxima\": 100\n}",
+							"raw": "{\n    \"nome\": \"Patio Atualizado\",\n    \"endereco\": \"Rua Nova, 456\",\n    \"capacidadeMaxima\": 100\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -589,6 +687,34 @@
 					"response": []
 				},
 				{
+					"name": "Listar Motos + AruCo Tags",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/motos/motos-com-tags",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"motos",
+								"motos-com-tags"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Buscar Moto por ID (GET)",
 					"protocolProfileBehavior": {
 						"followRedirects": true,
@@ -617,6 +743,25 @@
 								"motos",
 								"buscar-por-id",
 								"3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Buscar Motos por Placa",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/motos/buscar-por-placa/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"motos",
+								"buscar-por-placa",
+								"1"
 							]
 						}
 					},
@@ -696,6 +841,40 @@
 					"response": []
 				},
 				{
+					"name": "Buscar Moto por Modelo (GET)",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/motos/buscar-por-modelo/Mottu Pop",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"motos",
+								"buscar-por-modelo",
+								"Mottu Pop"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Criar Moto (POST)",
 					"protocolProfileBehavior": {
 						"followRedirects": true,
@@ -722,10 +901,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"placa\": \"ABC-1234\",\n  \"modelo\": \"Honda CB500\",\n  \"fabricante\": \"Honda\",\n  \"ano\": 2021,\n  \"idPatio\": 2,\n  \"localizacaoAtual\": \"Setor A\"\n}",
+							"raw": "{\n    \"placa\": \"ABC-1234\",\n    \"modelo\": \"Honda CB500\",\n    \"fabricante\": \"Honda\",\n    \"ano\": 2021,\n    \"idPatio\": 2,\n    \"localizacaoAtual\": \"Setor A\"\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -769,10 +948,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"placa\": \"XYZ-5678\",\n  \"modelo\": \"Yamaha MT-07\",\n  \"fabricante\": \"Yamaha\",\n  \"ano\": 2022,\n  \"idPatio\": 2,\n  \"localizacaoAtual\": \"Setor B\"\n}",
+							"raw": "{\n    \"placa\": \"XYZ-5678\",\n    \"modelo\": \"Yamaha MT-07\",\n    \"fabricante\": \"Yamaha\",\n    \"ano\": 2022,\n    \"idPatio\": 2,\n    \"localizacaoAtual\": \"Setor B\"\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -989,10 +1168,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"statusOperacional\": \"ONLINE\",\n  \"localizacaoFisica\": \"Entrada do Patio\",\n  \"idPatio\": 2\n}",
+							"raw": "{\n    \"statusOperacional\": \"ONLINE\",\n    \"localizacaoFisica\": \"Entrada do Patio\",\n    \"idPatio\": 2\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -1036,10 +1215,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"statusOperacional\": \"INATIVA\",\n  \"localizacaoFisica\": \"Saida do Patio\",\n  \"idPatio\": 3\n}",
+							"raw": "{\n    \"statusOperacional\": \"INATIVA\",\n    \"localizacaoFisica\": \"Saida do Patio\",\n    \"idPatio\": 3\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -1290,10 +1469,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"codigo\": \"TAG12345\",\n  \"idMoto\": 4,\n  \"status\": \"ATIVO\"\n}",
+							"raw": "{\n    \"codigo\": \"TAG12345\",\n    \"idMoto\": 4,\n    \"status\": \"ATIVO\"\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -1337,10 +1516,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"codigo\": \"TAG54321\",\n  \"idMoto\": 4,\n  \"status\": \"INATIVO\"\n}",
+							"raw": "{\n    \"codigo\": \"TAG54321\",\n    \"idMoto\": 4,\n    \"status\": \"INATIVO\"\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -1497,6 +1676,40 @@
 					"response": []
 				},
 				{
+					"name": "Buscar Status por Moto (GET)",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/status/buscar-por-moto/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"status",
+								"buscar-por-moto",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Buscar Status por TIpo Status (GET)",
 					"protocolProfileBehavior": {
 						"followRedirects": true,
@@ -1575,6 +1788,34 @@
 					"response": []
 				},
 				{
+					"name": "Buscar Status por Período de Tempo (GET)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/status/buscar-por-periodo?inicio=2025-09-28T00:00:00&fim=2025-09-28T23:59:59",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"status",
+								"buscar-por-periodo"
+							],
+							"query": [
+								{
+									"key": "inicio",
+									"value": "2025-09-28T00:00:00"
+								},
+								{
+									"key": "fim",
+									"value": "2025-09-28T23:59:59"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Criar Status (POST)",
 					"protocolProfileBehavior": {
 						"followRedirects": true,
@@ -1601,10 +1842,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"idMoto\": 4,\n  \"tipoStatus\": \"DISPONIVEL\",\n  \"descricao\": \"Moto disponível para uso\",\n  \"idFuncionario\": 3\n}",
+							"raw": "{\n    \"idMoto\": 4,\n    \"tipoStatus\": \"DISPONIVEL\",\n    \"descricao\": \"Moto disponível para uso\",\n    \"idFuncionario\": 3\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -1648,10 +1889,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"idMoto\": 4,\n  \"tipoStatus\": \"RESERVADO\",\n  \"descricao\": \"Moto em manutenção\",\n  \"idFuncionario\": 1\n}",
+							"raw": "{\n    \"idMoto\": 4,\n    \"tipoStatus\": \"RESERVADO\",\n    \"descricao\": \"Moto em manutenção\",\n    \"idFuncionario\": 1\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -1808,6 +2049,40 @@
 					"response": []
 				},
 				{
+					"name": "Buscar Localidade por Patio ID (GET)",
+					"protocolProfileBehavior": {
+						"followRedirects": true,
+						"disableUrlEncoding": false,
+						"disableCookies": false
+					},
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{jwt}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/localidades/buscar-por-patio/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"localidades",
+								"buscar-por-patio",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Buscar Localidade por Ponto Referencia (GET)",
 					"protocolProfileBehavior": {
 						"followRedirects": true,
@@ -1911,10 +2186,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"dataHora\": \"2025-05-18T20:00:00\",\n  \"idMoto\": 4,\n  \"idPatio\": 3,\n  \"pontoReferencia\": \"Entrada Principal\",\n  \"idCamera\": 4\n}",
+							"raw": "{\n    \"dataHora\": \"2025-05-18T20:00:00\",\n    \"idMoto\": 4,\n    \"idPatio\": 3,\n    \"pontoReferencia\": \"Entrada Principal\",\n    \"idCamera\": 4\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -1958,10 +2233,10 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"dataHora\": \"2025-05-18T20:00:00\",\n  \"idMoto\": 4,\n  \"idPatio\": 3,\n  \"pontoReferencia\": \"Area de Manuntenção\",\n  \"idCamera\": 4\n}",
+							"raw": "{\n    \"dataHora\": \"2025-05-18T20:00:00\",\n    \"idMoto\": 4,\n    \"idPatio\": 3,\n    \"pontoReferencia\": \"Area de Manuntenção\",\n    \"idCamera\": 4\n}",
 							"options": {
 								"raw": {
-									"language": "text"
+									"language": "json"
 								}
 							}
 						},
@@ -2064,6 +2339,7 @@
 			"script": {
 				"type": "text/javascript",
 				"packages": {},
+				"requests": {},
 				"exec": [
 					""
 				]
@@ -2074,6 +2350,7 @@
 			"script": {
 				"type": "text/javascript",
 				"packages": {},
+				"requests": {},
 				"exec": [
 					""
 				]
