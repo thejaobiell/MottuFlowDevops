@@ -12,6 +12,10 @@
 -- Armazena os dados dos funcionários que atuam no sistema,
 -- incluindo mecânicos, gerentes e administradores.
 -- =========================
+DROP DATABASE IF EXISTS mottuflow;
+CREATE DATABASE mottuflow;
+USE mottuflow;
+
 CREATE TABLE funcionario (
     id_funcionario BIGINT PRIMARY KEY AUTO_INCREMENT,
     nome VARCHAR(100) NOT NULL,
