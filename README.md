@@ -1,30 +1,21 @@
 # MottuFlow - Sistema de Gerenciamento de Frotas
-
 <div align="center">
+
   <img src="https://github.com/thejaobiell/MottuFlowJava/blob/main/MottuFlow/src/main/resources/static/images/logo.png?raw=true" alt="MottuFlow" width="200"/>
-  
+
+  <br><br>
+
   ![Java](https://img.shields.io/badge/Java-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
   ![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=spring-boot&logoColor=white)
   ![MySQL](https://img.shields.io/badge/MySQL-005C84?style=for-the-badge&logo=mysql&logoColor=white)
   ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
   ![Azure](https://img.shields.io/badge/Azure-0078D4?style=for-the-badge&logo=microsoft-azure&logoColor=white)
-  
+
+  <br><br>
+
   [![YouTube Demo](https://img.shields.io/badge/YouTube-Ver%20Demonstração-red?style=for-the-badge&logo=youtube)](https://www.youtube.com/watch?v=IvxQle04Qqw)
+
 </div>
-
-## 📋 Índice
-
-1. [Visão Geral](#-visão-geral)
-2. [Funcionalidades](#-funcionalidades)
-3. [Arquitetura](#-arquitetura)
-4. [Tecnologias](#-tecnologias)
-5. [Estrutura do Projeto](#-estrutura-do-projeto)
-6. [Banco de Dados](#-banco-de-dados)
-7. [Instalação e Deploy](#-instalação-e-deploy)
-8. [Como Usar](#-como-usar)
-9. [API REST](#-api-rest)
-10. [Scripts de Automação](#-scripts-de-automação)
-11. [Equipe](#-equipe)
 
 ## 🚀 Visão Geral
 
