@@ -9,8 +9,9 @@ TAG="v1"
 DB_CONTAINER="mottuflow-db"
 APP_CONTAINER="mottuflow-app"
 LOCATION="brazilsouth"
-DB_USER="rm${RM}"
-DB_PASS="Mottuflow#"
+
+DB_USER=${DB_USER:?DB_USER não definido}
+DB_PASS=${DB_PASS:?DB_PASS não definido}
 
 echo "* Login no Azure..."
 az account show > /dev/null 2>&1 || az login
