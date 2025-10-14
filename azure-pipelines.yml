@@ -1,0 +1,35 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pool:
+  name: teste-self-hosted-pool
+
+variables:
+  AZURE_SUBSCRIPTION_ID: 2b18d098-b263-4bf6-b8d5-09ffd05c54f0
+
+steps:
+- checkout: self
+
+- task: AzureCLI@2
+  displayName: 'Build e push da imagem para o ACR'
+  inputs:
+    azureSubscription: 'mottuflow-connection'
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      cd MottuFlow
+      chmod +x build.sh
+      ./build.sh
+
+- task: AzureCLI@2
+  displayName: 'Deploy no ACI'
+  inputs:
+    azureSubscription: 'mottuflow-connection'
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      cd MottuFlow
+      chmod +x deploy.sh
+      ./deploy.sh
