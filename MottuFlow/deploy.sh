@@ -13,8 +13,7 @@ LOCATION="brazilsouth"
 DB_USER=${DB_USER:?DB_USER não definido}
 DB_PASS=${DB_PASS:?DB_PASS não definido}
 
-echo "* Login no Azure..."
-az account show > /dev/null 2>&1 || az login
+command -v az >/dev/null 2>&1 || { echo "Azure CLI não encontrada. Abortando."; exit 1; }
 
 echo "* Buscando credenciais do ACR..."
 LOGIN_SERVER=$(az acr show --name "$ACR_NAME" --query loginServer -o tsv)
@@ -22,7 +21,7 @@ REG_USER=$(az acr credential show --name "$ACR_NAME" --query username -o tsv)
 REG_PASS=$(az acr credential show --name "$ACR_NAME" --query passwords[0].value -o tsv)
 
 echo "* Criando container do MySQL (se não existir)..."
-az container show --resource-group "$RG" --name "$DB_CONTAINER" > /dev/null 2>&1 || \
+az container show --resource-group "$RG" --name "$DB_CONTAINER" >/dev/null 2>&1 || \
 az container create \
   --resource-group "$RG" \
   --name "$DB_CONTAINER" \
@@ -40,7 +39,7 @@ az container create \
 DB_IP=$(az container show --resource-group "$RG" --name "$DB_CONTAINER" --query ipAddress.ip -o tsv)
 
 echo "* Criando container da aplicação (se não existir)..."
-az container show --resource-group "$RG" --name "$APP_CONTAINER" > /dev/null 2>&1 || \
+az container show --resource-group "$RG" --name "$APP_CONTAINER" >/dev/null 2>&1 || \
 az container create \
   --resource-group "$RG" \
   --name "$APP_CONTAINER" \
