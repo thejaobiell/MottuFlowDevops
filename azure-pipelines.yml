@@ -40,3 +40,6 @@ steps:
       cd MottuFlow
       chmod +x deploy.sh
       ./deploy.sh
+    env:
+      DB_USER: $(DB_USER)
+      DB_PASS: $(DB_PASS)
