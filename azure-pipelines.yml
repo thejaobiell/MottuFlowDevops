@@ -4,7 +4,7 @@ trigger:
       - main
 
 pool:
-  name: teste-self-hosted-pool
+  name: agente-mottuflow
 
 variables:
   AZURE_SUBSCRIPTION_ID: 2b18d098-b263-4bf6-b8d5-09ffd05c54f0
