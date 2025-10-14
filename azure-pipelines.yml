@@ -8,8 +8,7 @@ pool:
 
 variables:
   AZURE_SUBSCRIPTION_ID: 2b18d098-b263-4bf6-b8d5-09ffd05c54f0
-  DB_USER: $(DB_USER)
-  DB_PASS: $(DB_PASS)
+
 steps:
 - checkout: self
 
