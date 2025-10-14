@@ -8,7 +8,8 @@ pool:
 
 variables:
   AZURE_SUBSCRIPTION_ID: 2b18d098-b263-4bf6-b8d5-09ffd05c54f0
-
+  DB_USER: $(DB_USER)
+  DB_PASS: $(DB_PASS)
 steps:
 - checkout: self
 
@@ -22,6 +23,13 @@ steps:
       cd MottuFlow
       chmod +x build.sh
       ./build.sh
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publicar artefato'
+  inputs:
+    PathtoPublish: 'MottuFlow'
+    ArtifactName: 'mottuflow'
+    publishLocation: 'Container'
 
 - task: AzureCLI@2
   displayName: 'Deploy no ACI'
