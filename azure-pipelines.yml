@@ -61,11 +61,16 @@ stages:
         DB_USER: $(DB_USER)
         DB_PASS: $(DB_PASSWORD)
 
-    - task: Maven@4
-      displayName: 'Testes de integração com DB'
-      inputs:
-        mavenPomFile: 'MottuFlow/pom.xml'
-        goals: 'test'
-        options: '-Dspring.profiles.active=dev'
-        publishJUnitResults: true
-        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+  - task: Maven@4
+    displayName: 'Testes de integração com DB'
+    inputs:
+      mavenPomFile: 'MottuFlow/pom.xml'
+      goals: 'test'
+      options: '-Dspring.profiles.active=dev'
+      publishJUnitResults: true
+      testResultsFiles: '**/surefire-reports/TEST-*.xml'
+    env:
+      DB_HOST: $(DB_IP)
+      DB_PORT: 3306
+      DB_USER: $(DB_USER)
+      DB_PASSWORD: $(DB_PASSWORD)
