@@ -44,33 +44,107 @@ O sistema oferece gerenciamento completo de:
 ## 🏗️ Arquitetura
 
 ```mermaid
-graph TD
-    subgraph "Camada de Apresentação"
-        A[Cliente Web] --> C[MottuFlow App]
-        B[Aplicação Mobile] --> C
+graph TB
+    subgraph Personas["👥 PERSONAS"]
+        DEV["👨‍💻 Desenvolvedor"]
+        USER["👤 Usuário Final"]
+        ADMIN["👔 Administrador"]
     end
-
-    subgraph "Camada de Aplicação"
-        C --> D[Spring Boot API]
-        D --> E[JWT Authentication]
+    
+    subgraph GitHub["📦 SOURCE CONTROL"]
+        REPO["GitHub Repository<br/>(Código-fonte)"]
+        MASTER["🔴 Branch Master"]
     end
-
-    subgraph "Camada de Dados"
-        D --> F[(MySQL Database)]
+    
+    subgraph AzureDevOps["🔷 AZURE DEVOPS"]
+        VARIABLES["🔐 Pipeline Variables<br/>(Protected)"]
+        
+        subgraph CI["🔨 CI PIPELINE"]
+            TRIGGER["1️⃣ Trigger<br/>(Push to Master)"]
+            CHECKOUT["2️⃣ Checkout Code"]
+            BUILD["3️⃣ Build Maven"]
+            DOCKER_BUILD["4️⃣ Docker Build"]
+            PUSH_ACR["5️⃣ Push to ACR"]
+            ARTIFACT["6️⃣ Publish Artifact"]
+        end
+        
+        subgraph CD["🚀 CD PIPELINE"]
+            CD_TRIGGER["7️⃣ CD Trigger"]
+            DOWNLOAD["8️⃣ Download Artifact"]
+            DEPLOY_ACI["9️⃣ Deploy to ACI"]
+        end
     end
-
-    subgraph "Infraestrutura Azure"
-        C --> G[Azure Container Registry]
-        H[Azure Container Instances] --> C
-        H --> F
+    
+    subgraph Azure["☁️ AZURE CLOUD"]
+        ACR["📦 Container Registry<br/>(Docker Images)"]
+        ACI["🔷 Container Instances<br/>(Production)"]
+        MYSQL["🗄️ MySQL Database<br/>(MySQL 8.0)"]
     end
-
-    subgraph "DevOps"
-        I[Developer] --> J[build.sh]
-        J --> G
-        I --> K[deploy.sh]
-        K --> H
+    
+    subgraph Application["🎯 APPLICATION"]
+        SPRING["⚙️ Spring Boot 3.4.5<br/>(Java 21)"]
+        SECURITY["🔒 Spring Security<br/>(JWT Auth)"]
+        FLYWAY["🗂️ Flyway<br/>(Migrations)"]
+        THYMELEAF["🖼️ Thymeleaf<br/>(Templates)"]
+        WEB["🌐 Web Interface"]
     end
+    
+    %% Fluxo Principal
+    DEV -->|"git push"| REPO
+    REPO --> MASTER
+    MASTER -->|"webhook"| TRIGGER
+    
+    %% CI Flow
+    TRIGGER --> CHECKOUT
+    CHECKOUT --> BUILD
+    BUILD --> DOCKER_BUILD
+    DOCKER_BUILD --> PUSH_ACR
+    PUSH_ACR --> ACR
+    BUILD --> ARTIFACT
+    
+    %% CD Flow
+    ARTIFACT --> CD_TRIGGER
+    CD_TRIGGER --> DOWNLOAD
+    DOWNLOAD --> DEPLOY_ACI
+    VARIABLES -.->|"credentials"| DEPLOY_ACI
+    ACR -->|"pull image"| DEPLOY_ACI
+    DEPLOY_ACI --> ACI
+    
+    %% Application Stack
+    ACI --> SPRING
+    SPRING --> SECURITY
+    SPRING --> FLYWAY
+    SPRING --> THYMELEAF
+    FLYWAY --> MYSQL
+    SPRING --> MYSQL
+    THYMELEAF --> WEB
+    
+    %% User Access
+    USER -->|"HTTPS"| WEB
+    WEB -->|"API"| SPRING
+    
+    %% Admin
+    ADMIN -->|"monitora"| AzureDevOps
+    ADMIN -->|"gerencia"| Azure
+    
+    %% Estilos
+    classDef persona fill:#e1f5ff,stroke:#01579b,stroke-width:3px,color:#000
+    classDef github fill:#f0f0f0,stroke:#333,stroke-width:2px,color:#000
+    classDef azuredevops fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#000
+    classDef ci fill:#ffe0b2,stroke:#ef6c00,stroke-width:2px,color:#000
+    classDef cd fill:#ffccbc,stroke:#d84315,stroke-width:2px,color:#000
+    classDef azure fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px,color:#000
+    classDef app fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
+    classDef web fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
+    
+    class DEV,USER,ADMIN persona
+    class REPO,MASTER github
+    class TRIGGER,CHECKOUT,BUILD,DOCKER_BUILD,PUSH_ACR,ARTIFACT ci
+    class CD_TRIGGER,DOWNLOAD,DEPLOY_ACI cd
+    class VARIABLES,AzureDevOps azuredevops
+    class ACR,ACI,MYSQL azure
+    class SPRING,SECURITY,FLYWAY app
+    class THYMELEAF,WEB web
 ```
 
 ## 🛠️ Tecnologias
