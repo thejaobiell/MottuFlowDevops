@@ -3,17 +3,15 @@ trigger:
     include:
       - main
 
-
 pool:
   name: pool-mottuflow
 
 stages:
-# --------------------- CI (Build) ---------------------
+# --------------------- CI ---------------------
 - stage: Build
   displayName: 'CI - Build'
   jobs:
   - job: BuildJob
-    displayName: 'Job de Build'
     steps:
     - checkout: self
 
@@ -31,18 +29,16 @@ stages:
         ArtifactName: 'mottuflow'
         publishLocation: 'Container'
 
-# --------------------- CD (Deploy) ---------------------
+# --------------------- CD ---------------------
 - stage: Deploy
-  displayName: 'CD - Deploy no Azure Web App e Testes'
+  displayName: 'CD - Deploy Web App + Banco'
   dependsOn: Build
   condition: succeeded()
   jobs:
   - job: DeployJob
-    displayName: 'Job de Deploy'
     steps:
     - checkout: self
 
-    # Baixa os artefatos gerados no Build
     - task: DownloadBuildArtifacts@1
       displayName: 'Baixar artefato'
       inputs:
@@ -52,7 +48,7 @@ stages:
         downloadPath: '$(Pipeline.Workspace)/artifact'
 
     - task: AzureCLI@2
-      displayName: 'Criar Web App (se necessário)'
+      displayName: 'Criar Web App, DB e ACR'
       inputs:
         azureSubscription: 'mottuflow-connection'
         scriptType: bash
@@ -61,17 +57,12 @@ stages:
           cd MottuFlow
           chmod +x webapp.sh
           ./webapp.sh
-
-    - task: AzureWebApp@1
-      displayName: 'Deploy no Azure Web App'
-      inputs:
-        azureSubscription: 'mottuflow-connection'
-        appType: 'webAppLinux'
-        appName: 'mottuflow-app'
-        package: '$(Pipeline.Workspace)/artifact/mottuflow/*.jar'
+      env:
+        DB_USER: $(DB_USER)
+        DB_PASS: $(DB_PASSWORD)
 
     - task: Maven@4
-      displayName: 'Testes de integração'
+      displayName: 'Testes de integração com DB'
       inputs:
         mavenPomFile: 'MottuFlow/pom.xml'
         goals: 'test'
