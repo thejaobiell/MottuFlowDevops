@@ -62,6 +62,14 @@ az container create \
 
 DB_IP=$(az container show --resource-group "$RG" --name "$DB_CONTAINER" --query ipAddress.ip -o tsv)
 
+# ----------------- Espera MySQL ficar disponível -----------------
+echo "Aguardando MySQL em $DB_IP:3306..."
+until nc -z -v -w30 "$DB_IP" 3306; do
+  echo "MySQL ainda não disponível, tentando novamente em 5s..."
+  sleep 5
+done
+echo "MySQL pronto!"
+
 # ----------------- Configurar variáveis do Web App -----------------
 az webapp config appsettings set \
   --name "$APP_NAME" \
