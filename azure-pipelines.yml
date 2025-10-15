@@ -31,7 +31,7 @@ stages:
 
 # --------------------- CD ---------------------
 - stage: Deploy
-  displayName: 'CD - Deploy no ACI e Testes'
+  displayName: 'CD - Deploy no Web App e Testes'
   dependsOn: Build
   condition: succeeded()
   jobs:
@@ -47,33 +47,17 @@ stages:
         artifactName: 'mottuflow'
         downloadPath: '$(Pipeline.Workspace)/artifact'
 
-    - task: AzureCLI@2
-      displayName: 'Build e push da imagem para o ACR'
+    - task: AzureWebApp@1
+      displayName: 'Deploy no Azure Web App'
       inputs:
         azureSubscription: 'mottuflow-connection'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          cd MottuFlow
-          chmod +x build.sh
-          ./build.sh
-
-    - task: AzureCLI@2
-      displayName: 'Deploy no ACI'
-      inputs:
-        azureSubscription: 'mottuflow-connection'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          cd MottuFlow
-          chmod +x deploy.sh
-          ./deploy.sh
-      env:
-        DB_USER: $(DB_USER)
-        DB_PASSWORD: $(DB_PASSWORD)
+        appType: 'webAppLinux'
+        appName: 'nome-do-seu-webapp'
+        package: '$(Pipeline.Workspace)/artifact/mottuflow/*.jar'
+        runtimeStack: 'JAVA|21-java21'
 
     - task: Maven@4
-      displayName: 'Testes de integração com DB no Deploy'
+      displayName: 'Testes de integração pós-deploy'
       inputs:
         mavenPomFile: 'MottuFlow/pom.xml'
         goals: 'test'
