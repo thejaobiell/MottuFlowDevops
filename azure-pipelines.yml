@@ -6,6 +6,9 @@ trigger:
 pool:
   name: pool-mottuflow
 
+variables:
+- group: variaveisMottu
+
 stages:
 # --------------------- CI ---------------------
 - stage: Build
