@@ -4,43 +4,71 @@ trigger:
       - main
 
 pool:
-  name: agente-mottuflow
+  name: pool-mottuflow
 
-variables:
-  AZURE_SUBSCRIPTION_ID: 2b18d098-b263-4bf6-b8d5-09ffd05c54f0
+stages:
+# --------------------- CI ---------------------
+- stage: Build_Test
+  displayName: 'CI - Build e Testes'
+  jobs:
+  - job: Build
+    steps:
+    - checkout: self
 
-steps:
-- checkout: self
+    - task: Maven@4
+      displayName: 'Build e Testes com Maven'
+      inputs:
+        mavenPomFile: 'MottuFlow/pom.xml'
+        goals: 'clean package'
+        publishJUnitResults: true
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
 
-- task: AzureCLI@2
-  displayName: 'Build e push da imagem para o ACR'
-  inputs:
-    azureSubscription: 'mottuflow-connection'
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      cd MottuFlow
-      chmod +x build.sh
-      ./build.sh
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publicar artefato Maven'
+      inputs:
+        PathtoPublish: 'MottuFlow/target'
+        ArtifactName: 'mottuflow'
+        publishLocation: 'Container'
 
-- task: PublishBuildArtifacts@1
-  displayName: 'Publicar artefato'
-  inputs:
-    PathtoPublish: 'MottuFlow'
-    ArtifactName: 'mottuflow'
-    publishLocation: 'Container'
+# --------------------- CD ---------------------
+- stage: Deploy
+  displayName: 'CD - Deploy no ACI'
+  dependsOn: Build_Test
+  condition: succeeded()
+  jobs:
+  - job: DeployJob
+    steps:
+    - checkout: self
 
-- task: AzureCLI@2
-  displayName: 'Deploy no ACI'
-  inputs:
-    azureSubscription: 'mottuflow-connection'
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      cd MottuFlow
-      chmod +x deploy.sh
-      ./deploy.sh
-  env:
-    DB_USER: $(DB_USER)
-    DB_PASS: $(DB_PASS)
+    - task: DownloadBuildArtifacts@1
+      displayName: 'Baixar artefato'
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'mottuflow'
+        downloadPath: '$(Pipeline.Workspace)/artifact'
 
+    - task: AzureCLI@2
+      displayName: 'Build e push da imagem para o ACR'
+      inputs:
+        azureSubscription: 'mottuflow-connection'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          cd MottuFlow
+          chmod +x build.sh
+          ./build.sh
+
+    - task: AzureCLI@2
+      displayName: 'Deploy no ACI'
+      inputs:
+        azureSubscription: 'mottuflow-connection'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          cd MottuFlow
+          chmod +x deploy.sh
+          ./deploy.sh
+      env:
+        DB_USER: $(DB_USER)
+        DB_PASSWORD: $(DB_PASSWORD)
