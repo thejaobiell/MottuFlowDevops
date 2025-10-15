@@ -61,7 +61,12 @@ az container create \
   --location "$LOCATION"
 
 DB_IP=$(az container show --resource-group "$RG" --name "$DB_CONTAINER" --query ipAddress.ip -o tsv)
-echo "##vso[task.setvariable variable=DB_IP]$DB_IP"
+
+# ----------------- Configurar variáveis do Web App -----------------
+az webapp config appsettings set \
+  --name "$APP_NAME" \
+  --resource-group "$RG" \
+  --settings DB_HOST="$DB_IP" DB_PORT=3306 DB_NAME=mottuflow DB_USER="$DB_USER" DB_PASSWORD="$DB_PASS"
 
 echo " --------------- "
 echo "Web App pronto: $APP_NAME"
