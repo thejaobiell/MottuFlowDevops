@@ -8,20 +8,19 @@ pool:
 
 stages:
 # --------------------- CI ---------------------
-- stage: Build_Test
-  displayName: 'CI - Build e Testes'
+- stage: Build
+  displayName: 'CI - Build'
   jobs:
-  - job: Build
+  - job: BuildJob
     steps:
     - checkout: self
 
     - task: Maven@4
-      displayName: 'Build e Testes com Maven'
+      displayName: 'Build com Maven'
       inputs:
         mavenPomFile: 'MottuFlow/pom.xml'
-        goals: 'clean package'
-        publishJUnitResults: true
-        testResultsFiles: '**/surefire-reports/TEST-*.xml'
+        goals: 'clean package -DskipTests=true'
+        publishJUnitResults: false
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publicar artefato Maven'
@@ -32,8 +31,8 @@ stages:
 
 # --------------------- CD ---------------------
 - stage: Deploy
-  displayName: 'CD - Deploy no ACI'
-  dependsOn: Build_Test
+  displayName: 'CD - Deploy no ACI e Testes'
+  dependsOn: Build
   condition: succeeded()
   jobs:
   - job: DeployJob
@@ -72,3 +71,12 @@ stages:
       env:
         DB_USER: $(DB_USER)
         DB_PASSWORD: $(DB_PASSWORD)
+
+    - task: Maven@4
+      displayName: 'Testes de integração com DB no Deploy'
+      inputs:
+        mavenPomFile: 'MottuFlow/pom.xml'
+        goals: 'test'
+        options: '-Dspring.profiles.active=dev'
+        publishJUnitResults: true
+        testResultsFiles: '**/surefire-reports/TEST-*.xml'
