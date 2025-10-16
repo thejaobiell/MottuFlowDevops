@@ -88,7 +88,6 @@ stages:
                 [ -z "$DB_IP" ] && sleep 5
               done
               echo "MySQL pronto em $DB_IP"
-
               echo "##vso[task.setvariable variable=DB_IP]$DB_IP"
 
 # --------------------- Deploy ---------------------
@@ -106,6 +105,21 @@ stages:
             steps:
               - checkout: self
 
+              # Cria App Service Plan e Web App se não existirem
+              - task: AzureCLI@2
+                displayName: "Criar Web App e App Service Plan se não existir"
+                inputs:
+                  azureSubscription: "mottuflow-connection"
+                  scriptType: bash
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    az appservice plan show --name $APP_PLAN --resource-group $RESOURCE_GROUP >/dev/null 2>&1 || \
+                    az appservice plan create --name $APP_PLAN --resource-group $RESOURCE_GROUP --sku B1 --is-linux --location $LOCATION
+
+                    az webapp show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP >/dev/null 2>&1 || \
+                    az webapp create --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --plan $APP_PLAN --runtime "JAVA|21-java21"
+
+              # Deploy do artifact
               - task: AzureWebApp@1
                 displayName: "Deploy to Azure Web App"
                 inputs:
@@ -114,6 +128,7 @@ stages:
                   appName: "$(WEBAPP_NAME)"
                   package: "$(Pipeline.Workspace)/demo/target/*.jar"
 
+              # Configura variáveis de ambiente do DB no Web App
               - task: AzureCLI@2
                 displayName: "Set DB settings in Web App"
                 inputs:
