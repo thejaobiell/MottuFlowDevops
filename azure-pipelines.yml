@@ -6,24 +6,20 @@ pool:
 
 variables:
   - group: mottuflow-secrets
-
   - name: RESOURCE_GROUP
     value: "sprint-mottuflow"
-
   - name: WEBAPP_NAME
     value: "mottuflow-app"
-
   - name: APP_PLAN
     value: "mottuflow-plan"
-
   - name: LOCATION
     value: "brazilsouth"
-
   - name: ACI_NAME
     value: "mottuflow-db"
-    
   - name: CONTAINER_IMAGE
     value: "mysql:8.0"
+  - name: ACR_LOGIN_SERVER
+    value: "seu-acr-name.azurecr.io"
 
 stages:
 
