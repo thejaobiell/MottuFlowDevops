@@ -1,90 +1,130 @@
 trigger:
-  branches:
-    include:
-      - main
+  - main
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: ubuntu-latest
 
 variables:
-- group: variaveisMottu
+  DB_USER: "mottuuser"
+  DB_PASSWORD: "MottuPass123!"
+  DB_NAME: "mottuflow"
+  RESOURCE_GROUP: "sprint-mottuflow"
+  WEBAPP_NAME: "mottuflow-app"
+  APP_PLAN: "mottuflow-plan"
+  LOCATION: "brazilsouth"
+  ACI_NAME: "mottuflow-db"
+  CONTAINER_IMAGE: "mysql:8.0"
 
 stages:
-# --------------------- CI ---------------------
 
+# --------------------- Build ---------------------
 - stage: Build
-  displayName: 'CI - Build'
+  displayName: "Build stage"
   jobs:
-  - job: BuildJob
-    steps:
-    - checkout: self
-    - task: JavaToolInstaller@0
-      displayName: 'Instalar JDK 21'
-      inputs:
-        versionSpec: '21'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
+    - job: Build
+      displayName: "Build job"
+      container: maven:3.9.11-eclipse-temurin-21-noble
+      steps:
+        - checkout: self
 
-    - task: Maven@4
-      displayName: 'Build com Maven'
-      inputs:
-        mavenPomFile: 'MottuFlow/pom.xml'
-        goals: 'clean package -DskipTests=true'
-        publishJUnitResults: false
-      env:
-        JAVA_HOME: $(JAVA_HOME_21_X64)
+        - task: Maven@4
+          displayName: "Build com Maven"
+          inputs:
+            mavenPomFile: "pom.xml"
+            goals: "clean package -DskipTests=true"
+            publishJUnitResults: true
+            testResultsFiles: "**/surefire-reports/TEST-*.xml"
 
-    - task: PublishBuildArtifacts@1
-      displayName: 'Publicar artefato Maven'
-      inputs:
-        PathtoPublish: 'MottuFlow/target'
-        ArtifactName: 'mottuflow'
-        publishLocation: 'Container'
+        - task: CopyFiles@2
+          displayName: "Copy Files to artifact staging directory"
+          inputs:
+            SourceFolder: "$(System.DefaultWorkingDirectory)"
+            Contents: "**/target/*.jar"
+            TargetFolder: $(Build.ArtifactStagingDirectory)
 
-# --------------------- CD ---------------------
-- stage: Deploy
-  displayName: 'CD - Deploy Web App + Banco'
+        - publish: $(Build.ArtifactStagingDirectory)
+          artifact: demo
+
+# --------------------- MySQL ACI ---------------------
+- stage: MySQL
+  displayName: "Create MySQL ACI"
   dependsOn: Build
+  jobs:
+    - job: CreateACI
+      displayName: "Provision MySQL container"
+      steps:
+        - task: AzureCLI@2
+          displayName: "Criar ACI MySQL"
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              az group show --name $RESOURCE_GROUP >/dev/null 2>&1 || \
+              az group create --name $RESOURCE_GROUP --location $LOCATION
+
+              # Cria o container se não existir
+              az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME >/dev/null 2>&1 || \
+              az container create \
+                --resource-group $RESOURCE_GROUP \
+                --name $ACI_NAME \
+                --image $CONTAINER_IMAGE \
+                --ports 3306 \
+                --cpu 1 \
+                --memory 1.5 \
+                --dns-name-label "${ACI_NAME}-dns-${BUILD_BUILDID}" \
+                --ip-address public \
+                --environment-variables \
+                    MYSQL_ROOT_PASSWORD="$DB_PASSWORD" \
+                    MYSQL_DATABASE="$DB_NAME" \
+                    MYSQL_USER="$DB_USER" \
+                    MYSQL_PASSWORD="$DB_PASSWORD" \
+                --restart-policy Always
+
+              # Espera o MySQL ficar pronto
+              echo "Aguardando MySQL em execução..."
+              DB_IP=""
+              while [ -z "$DB_IP" ]; do
+                DB_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query ipAddress.ip -o tsv)
+                [ -z "$DB_IP" ] && sleep 5
+              done
+              echo "MySQL pronto em $DB_IP"
+
+              # Define variável de pipeline para usar no deploy
+              echo "##vso[task.setvariable variable=DB_IP]$DB_IP"
+
+# --------------------- Deploy ---------------------
+- stage: Deploy
+  displayName: "Deploy Web App"
+  dependsOn: MySQL
   condition: succeeded()
   jobs:
-  - job: DeployJob
-    steps:
-    - checkout: self
+    - deployment: DeployWebApp
+      displayName: "Deploy Web App"
+      environment: "Production"
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - checkout: self
 
-    - task: DownloadBuildArtifacts@1
-      displayName: 'Baixar artefato'
-      inputs:
-        buildType: 'current'
-        downloadType: 'single'
-        artifactName: 'mottuflow'
-        downloadPath: '$(Pipeline.Workspace)/artifact'
+              # Deploy do artifact
+              - task: AzureWebApp@1
+                displayName: "Deploy to Azure Web App"
+                inputs:
+                  azureSubscription: "mottuflow-connection"
+                  appType: "webAppLinux"
+                  appName: "$(WEBAPP_NAME)"
+                  package: "$(Pipeline.Workspace)/demo/target/*.jar"
 
-    - task: AzureCLI@2
-      displayName: 'Criar Web App, DB e ACR'
-      inputs:
-        azureSubscription: 'mottuflow-connection'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          cd MottuFlow
-          chmod +x webapp.sh
-          ./webapp.sh
-      env:
-        DB_USER: $(DB_USER)
-        DB_PASS: $(DB_PASSWORD)
-
-    - task: Maven@4
-      displayName: 'Testes de integração com DB'
-      inputs:
-        mavenPomFile: 'MottuFlow/pom.xml'
-        goals: 'test'
-        publishJUnitResults: true
-        testResultsFiles: '**/surefire-reports/TEST-*.xml'
-      env:
-        JAVA_HOME: $(JAVA_HOME_21_X64)
-        DB_HOST: localhost
-        DB_PORT: 3306
-        DB_USER: root
-        DB_PASSWORD: root
-        DB_NAME: mottuflow
-
+              - task: AzureCLI@2
+                displayName: "Set DB settings in Web App"
+                inputs:
+                  azureSubscription: "mottuflow-connection"
+                  scriptType: bash
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    az webapp config appsettings set \
+                      --name $WEBAPP_NAME \
+                      --resource-group $RESOURCE_GROUP \
+                      --settings DB_HOST=$(DB_IP) DB_PORT=3306 DB_NAME=$DB_NAME DB_USER=$DB_USER DB_PASSWORD=$DB_PASSWORD
