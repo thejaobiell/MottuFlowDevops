@@ -31,7 +31,8 @@ stages:
         mavenPomFile: 'MottuFlow/pom.xml'
         goals: 'clean package -DskipTests=true'
         publishJUnitResults: false
-
+      env:
+        JAVA_HOME: $(JAVA_HOME_21_X64)
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publicar artefato Maven'
@@ -77,10 +78,10 @@ stages:
       inputs:
         mavenPomFile: 'MottuFlow/pom.xml'
         goals: 'test'
-        options: '-Dspring.profiles.active=dev'
         publishJUnitResults: true
         testResultsFiles: '**/surefire-reports/TEST-*.xml'
       env:
+        JAVA_HOME: $(JAVA_HOME_21_X64)
         DB_HOST: $(DB_IP)
         DB_PORT: 3306
         DB_USER: $(DB_USER)
