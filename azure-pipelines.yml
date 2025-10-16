@@ -11,12 +11,19 @@ variables:
 
 stages:
 # --------------------- CI ---------------------
+
 - stage: Build
   displayName: 'CI - Build'
   jobs:
   - job: BuildJob
     steps:
     - checkout: self
+    - task: JavaToolInstaller@0
+      displayName: 'Instalar JDK 21'
+      inputs:
+        versionSpec: '21'
+        jdkArchitecture: 'x64'
+        jdkSourceOption: 'PreInstalled'
 
     - task: Maven@4
       displayName: 'Build com Maven'
@@ -24,6 +31,7 @@ stages:
         mavenPomFile: 'MottuFlow/pom.xml'
         goals: 'clean package -DskipTests=true'
         publishJUnitResults: false
+
 
     - task: PublishBuildArtifacts@1
       displayName: 'Publicar artefato Maven'
