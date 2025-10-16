@@ -118,6 +118,13 @@ stages:
 
                     az webapp show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP >/dev/null 2>&1 || \
                     az webapp create --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --plan $APP_PLAN --runtime "JAVA|21-java21"
+                    
+              - task: DownloadBuildArtifacts@1
+                inputs:
+                  buildType: 'current'
+                  downloadType: 'single'
+                  artifactName: 'demo'
+                  downloadPath: '$(Pipeline.Workspace)/demo'
 
               # Deploy do artifact
               - task: AzureWebApp@1
@@ -126,7 +133,7 @@ stages:
                   azureSubscription: "mottuflow-connection"
                   appType: "webAppLinux"
                   appName: "$(WEBAPP_NAME)"
-                  package: "$(Pipeline.Workspace)/demo/target/*.jar"
+                  package: $(Pipeline.Workspace)/demo/*.jar
 
               # Configura variáveis de ambiente do DB no Web App
               - task: AzureCLI@2
