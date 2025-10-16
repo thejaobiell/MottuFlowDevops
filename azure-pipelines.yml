@@ -195,24 +195,20 @@ stages:
                   scriptType: bash
                   scriptLocation: inlineScript
                   inlineScript: |
-                    DB_USER=$(DB_USER)
-                    DB_PASSWORD=$(DB_PASSWORD)
-                    DB_NAME=$(DB_NAME)
-                    DB_IP=$(DB_IP)
+                    echo "DB_IP: $(DB_IP)"
+                    echo "DB_USER: $(DB_USER)"
+                    echo "DB_PASSWORD: $(DB_PASSWORD)"
+                    echo "DB_NAME: $(DB_NAME)"
 
-                    DOCKER_USER=$DOCKERHUB_USER
-                    DOCKER_PASS=$DOCKERHUB_PASSWORD
-
-                    echo "Configurando conexão com banco de dados..."
                     az webapp config appsettings set \
                       --name $(WEBAPP_NAME) \
                       --resource-group $(RESOURCE_GROUP) \
                       --settings \
-                        DB_HOST="$DB_IP"  \
+                        DB_HOST="$(DB_IP)" \
                         DB_PORT=3306 \
-                        DB_NAME="$DB_NAME" \
-                        DB_USER="$DB_USER" \
-                        DB_PASSWORD="$DB_PASSWORD"
+                        DB_NAME="$(DB_NAME)" \
+                        DB_USER="$(DB_USER)" \
+                        DB_PASSWORD="$(DB_PASSWORD)"
 
               - task: AzureCLI@2
                 displayName: "Validar Implantação"
