@@ -17,7 +17,7 @@ variables:
   - name: ACI_NAME
     value: "mottuflow-db"
   - name: CONTAINER_IMAGE
-    value: "mysql:8.0"
+    value: "mysql:8.0.34"
   - name: ACR_LOGIN_SERVER
     value: "seu-acr-name.azurecr.io"
 
