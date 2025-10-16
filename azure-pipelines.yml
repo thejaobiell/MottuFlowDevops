@@ -63,13 +63,13 @@ stages:
               az group show --name $RESOURCE_GROUP >/dev/null 2>&1 || \
               az group create --name $RESOURCE_GROUP --location $LOCATION
 
-              # Cria o container se não existir
               az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME >/dev/null 2>&1 || \
               az container create \
                 --resource-group $RESOURCE_GROUP \
                 --name $ACI_NAME \
                 --image $CONTAINER_IMAGE \
                 --ports 3306 \
+                --os-type Linux \
                 --cpu 1 \
                 --memory 1.5 \
                 --dns-name-label "${ACI_NAME}-dns-${BUILD_BUILDID}" \
@@ -81,7 +81,6 @@ stages:
                     MYSQL_PASSWORD="$DB_PASSWORD" \
                 --restart-policy Always
 
-              # Espera o MySQL ficar pronto
               echo "Aguardando MySQL em execução..."
               DB_IP=""
               while [ -z "$DB_IP" ]; do
@@ -90,7 +89,6 @@ stages:
               done
               echo "MySQL pronto em $DB_IP"
 
-              # Define variável de pipeline para usar no deploy
               echo "##vso[task.setvariable variable=DB_IP]$DB_IP"
 
 # --------------------- Deploy ---------------------
@@ -108,7 +106,6 @@ stages:
             steps:
               - checkout: self
 
-              # Deploy do artifact
               - task: AzureWebApp@1
                 displayName: "Deploy to Azure Web App"
                 inputs:
