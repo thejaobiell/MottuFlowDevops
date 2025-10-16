@@ -146,92 +146,88 @@ stages:
   variables:
     DB_IP: $[ dependencies.BancoDados.outputs['CriarMySQL.DB_IP'] ]
   jobs:
-    - deployment: ImplantarAplicacao
+    - job: ImplantarAplicacao
       displayName: "Implantar Aplicação Web"
-      environment: "Produção"
-      strategy:
-        runOnce:
-          deploy:
-            steps:
-              - checkout: self
+      steps:
+        - checkout: self
 
-              - task: AzureCLI@2
-                displayName: "Criar Plano e Aplicação Web"
-                inputs:
-                  azureSubscription: "mottuflow-connection"
-                  scriptType: bash
-                  scriptLocation: inlineScript
-                  inlineScript: |
-                    set -e
+        - task: AzureCLI@2
+          displayName: "Criar Plano e Aplicação Web"
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              set -e
 
-                    echo "Verificando plano de serviço..."
-                    az appservice plan show --name $APP_PLAN --resource-group $RESOURCE_GROUP >/dev/null 2>&1 || \
-                    az appservice plan create --name $APP_PLAN --resource-group $RESOURCE_GROUP --sku B1 --is-linux --location $LOCATION
+              echo "Verificando plano de serviço..."
+              az appservice plan show --name $(APP_PLAN) --resource-group $(RESOURCE_GROUP) >/dev/null 2>&1 || \
+              az appservice plan create --name $(APP_PLAN) --resource-group $(RESOURCE_GROUP) --sku B1 --is-linux --location $(LOCATION)
 
-                    echo "Verificando aplicação web..."
-                    az webapp show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP >/dev/null 2>&1 || \
-                    az webapp create --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --plan $APP_PLAN --runtime "JAVA|21-java21"
+              echo "Verificando aplicação web..."
+              az webapp show --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) >/dev/null 2>&1 || \
+              az webapp create --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) --plan $(APP_PLAN) --runtime "JAVA|21-java21"
 
-              - task: DownloadBuildArtifacts@1
-                displayName: "Baixar Artefato da Construção"
-                inputs:
-                  buildType: 'current'
-                  downloadType: 'single'
-                  artifactName: 'demo'
-                  downloadPath: '$(Pipeline.Workspace)/demo'
+        - task: DownloadBuildArtifacts@1
+          displayName: "Baixar Artefato da Construção"
+          inputs:
+            buildType: 'current'
+            downloadType: 'single'
+            artifactName: 'demo'
+            downloadPath: '$(Pipeline.Workspace)/demo'
 
-              - task: AzureWebApp@1
-                displayName: "Implantar Arquivo JAR"
-                inputs:
-                  azureSubscription: "mottuflow-connection"
-                  appType: "webAppLinux"
-                  appName: "$(WEBAPP_NAME)"
-                  package: $(Pipeline.Workspace)/demo/*.jar
+        - task: AzureWebApp@1
+          displayName: "Implantar Arquivo JAR"
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            appType: "webAppLinux"
+            appName: "$(WEBAPP_NAME)"
+            package: $(Pipeline.Workspace)/demo/*.jar
 
-              - task: AzureCLI@2
-                displayName: "Configurar Variáveis de Ambiente"
-                inputs:
-                  azureSubscription: "mottuflow-connection"
-                  scriptType: bash
-                  scriptLocation: inlineScript
-                  inlineScript: |
-                    echo "DB_IP: $(DB_IP)"
-                    echo "DB_USER: $(DB_USER)"
-                    echo "DB_PASSWORD: $(DB_PASSWORD)"
-                    echo "DB_NAME: $(DB_NAME)"
+        - task: AzureCLI@2
+          displayName: "Configurar Variáveis de Ambiente"
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              echo "DB_IP: $(DB_IP)"
+              echo "DB_USER: $(DB_USER)"
+              echo "DB_PASSWORD: $(DB_PASSWORD)"
+              echo "DB_NAME: $(DB_NAME)"
 
-                    az webapp config appsettings set \
-                      --name $(WEBAPP_NAME) \
-                      --resource-group $(RESOURCE_GROUP) \
-                      --settings \
-                        DB_HOST="$(DB_IP)" \
-                        DB_PORT=3306 \
-                        DB_NAME="$(DB_NAME)" \
-                        DB_USER="$(DB_USER)" \
-                        DB_PASSWORD="$(DB_PASSWORD)"
+              az webapp config appsettings set \
+                --name $(WEBAPP_NAME) \
+                --resource-group $(RESOURCE_GROUP) \
+                --settings \
+                  DB_HOST="$(DB_IP)" \
+                  DB_PORT=3306 \
+                  DB_NAME="$(DB_NAME)" \
+                  DB_USER="$(DB_USER)" \
+                  DB_PASSWORD="$(DB_PASSWORD)"
 
-              - task: AzureCLI@2
-                displayName: "Validar Implantação"
-                inputs:
-                  azureSubscription: "mottuflow-connection"
-                  scriptType: bash
-                  scriptLocation: inlineScript
-                  inlineScript: |
-                    echo "Aguardando aplicação inicializar..."
-                    sleep 10
+        - task: AzureCLI@2
+          displayName: "Validar Implantação"
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              echo "Aguardando aplicação inicializar..."
+              sleep 10
 
-                    APP_URL="https://$(WEBAPP_NAME).azurewebsites.net"
-                    echo "Verificando saúde da aplicação em $APP_URL"
+              APP_URL="https://$(WEBAPP_NAME).azurewebsites.net"
+              echo "Verificando saúde da aplicação em $APP_URL"
 
-                    for i in {1..10}; do
-                      HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL || echo "000")
-                      if [ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" != "502" ]; then
-                        echo "✓ Aplicação respondendo com status $HTTP_CODE"
-                        exit 0
-                      fi
-                      echo "Tentativa $i/10 - Status: $HTTP_CODE"
-                      sleep 5
-                    done
+              for i in {1..10}; do
+                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL || echo "000")
+                if [ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" != "502" ]; then
+                  echo "✓ Aplicação respondendo com status $HTTP_CODE"
+                  exit 0
+                fi
+                echo "Tentativa $i/10 - Status: $HTTP_CODE"
+                sleep 5
+              done
 
-                    echo "Aplicação não respondeu após 60 segundos"
-                    exit 0
+              echo "Aplicação não respondeu após 60 segundos"
+              exit 0
