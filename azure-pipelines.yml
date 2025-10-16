@@ -75,6 +75,9 @@ stages:
               DB_PASSWORD=$(DB_PASSWORD)
               DB_NAME=$(DB_NAME)
 
+              DOCKER_USER=$(DOCKERHUB_USER)       # variável do DevOps
+              DOCKER_PASS=$(DOCKERHUB_PASSWORD)   # variável do DevOps
+
               echo "Criando resource group..."
               az group show --name $RESOURCE_GROUP >/dev/null 2>&1 || \
               az group create --name $RESOURCE_GROUP --location $LOCATION
