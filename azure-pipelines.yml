@@ -86,21 +86,21 @@ stages:
               if ! az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME >/dev/null 2>&1; then
                 echo "Criando container MySQL..."
                 
-                --registry-login-server index.docker.io \
-                --registry-username $DOCKER_USER \
-                --registry-password $DOCKER_PASS
-
                 az container create \
-                  --resource-group $RESOURCE_GROUP \
-                  --name $ACI_NAME \
-                  --image $CONTAINER_IMAGE \
-                  --ports 3306 \
-                  --os-type Linux \
-                  --cpu 1 --memory 1.5 \
-                  --dns-name-label "${ACI_NAME}-dns-${BUILD_BUILDID}" \
-                  --ip-address public \
-                  --environment-variables MYSQL_ROOT_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$DB_NAME" MYSQL_USER="$DB_USER" MYSQL_PASSWORD="$DB_PASSWORD" \
-                  --restart-policy Always
+              --resource-group $RESOURCE_GROUP \
+              --name $ACI_NAME \
+              --image $CONTAINER_IMAGE \
+              --ports 3306 \
+              --os-type Linux \
+              --cpu 1 --memory 1.5 \
+              --dns-name-label "${ACI_NAME}-dns-${BUILD_BUILDID}" \
+              --ip-address public \
+              --environment-variables MYSQL_ROOT_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$DB_NAME" MYSQL_USER="$DB_USER" MYSQL_PASSWORD="$DB_PASSWORD" \
+              --restart-policy Always \
+              --registry-login-server index.docker.io \
+              --registry-username $DOCKER_USER \
+              --registry-password $DOCKER_PASS
+
               fi
 
               echo "Aguardando MySQL ficar disponível..."
@@ -204,9 +204,12 @@ stages:
                   scriptType: bash
                   scriptLocation: inlineScript
                   inlineScript: |
-                    DB_USER=$(DB_USER)
-                    DB_PASSWORD=$(DB_PASSWORD)
-                    DB_NAME=$(DB_NAME)
+                    DB_USER=$DB_USER
+                    DB_PASSWORD=$DB_PASSWORD
+                    DB_NAME=$DB_NAME
+
+                    DOCKER_USER=$DOCKERHUB_USER
+                    DOCKER_PASS=$DOCKERHUB_PASSWORD
 
                     echo "Configurando conexão com banco de dados..."
                     az webapp config appsettings set \
@@ -242,5 +245,5 @@ stages:
                       sleep 5
                     done
 
-                    echo "⚠ Aplicação não respondeu após 60 segundos"
+                    echo "Aplicação não respondeu após 60 segundos"
                     exit 0
