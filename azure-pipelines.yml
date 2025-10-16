@@ -30,7 +30,7 @@ stages:
         - task: Maven@4
           displayName: "Build com Maven"
           inputs:
-            mavenPomFile: "pom.xml"
+            mavenPomFile: "MottuFlow/pom.xml"
             goals: "clean package -DskipTests=true"
             publishJUnitResults: true
             testResultsFiles: "**/surefire-reports/TEST-*.xml"
