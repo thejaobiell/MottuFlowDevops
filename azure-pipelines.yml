@@ -105,7 +105,6 @@ stages:
             steps:
               - checkout: self
 
-              # Cria App Service Plan e Web App se não existirem
               - task: AzureCLI@2
                 displayName: "Criar Web App e App Service Plan se não existir"
                 inputs:
@@ -126,16 +125,14 @@ stages:
                   artifactName: 'demo'
                   downloadPath: '$(Pipeline.Workspace)/demo'
 
-              # Deploy do artifact
               - task: AzureWebApp@1
                 displayName: "Deploy to Azure Web App"
                 inputs:
                   azureSubscription: "mottuflow-connection"
                   appType: "webAppLinux"
                   appName: "$(WEBAPP_NAME)"
-                  package: $(Pipeline.Workspace)/demo/*.jar
+                  package: $(Pipeline.Workspace)/demo/MottuFlow/target/*.jar
 
-              # Configura variáveis de ambiente do DB no Web App
               - task: AzureCLI@2
                 displayName: "Set DB settings in Web App"
                 inputs:
