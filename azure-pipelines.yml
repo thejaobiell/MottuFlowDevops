@@ -17,50 +17,37 @@ variables:
 
 stages:
 
-# --------------------- Build ---------------------
 - stage: Build
-  displayName: "Build stage"
+  displayName: "Build Stage"
   jobs:
     - job: Build
-      displayName: "Build job"
       container: maven:3.9.11-eclipse-temurin-21-noble
       steps:
         - checkout: self
-
         - task: Maven@4
-          displayName: "Build com Maven"
           inputs:
             mavenPomFile: "MottuFlow/pom.xml"
             goals: "clean package -DskipTests=true"
-            publishJUnitResults: true
-            testResultsFiles: "**/surefire-reports/TEST-*.xml"
-
         - task: CopyFiles@2
-          displayName: "Copy Files to artifact staging directory"
           inputs:
-            SourceFolder: "$(System.DefaultWorkingDirectory)"
-            Contents: "**/target/*.jar"
-            TargetFolder: $(Build.ArtifactStagingDirectory)
-
+            SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow/target"
+            Contents: "*.jar"
+            TargetFolder: "$(Build.ArtifactStagingDirectory)"
         - publish: $(Build.ArtifactStagingDirectory)
           artifact: demo
 
-# --------------------- MySQL ACI ---------------------
 - stage: MySQL
-  displayName: "Create MySQL ACI"
+  displayName: "Provision MySQL ACI"
   dependsOn: Build
   jobs:
     - job: CreateACI
-      displayName: "Provision MySQL container"
       steps:
         - task: AzureCLI@2
-          displayName: "Criar ACI MySQL"
           inputs:
             azureSubscription: "mottuflow-connection"
             scriptType: bash
             scriptLocation: inlineScript
             inlineScript: |
-              az group show --name $RESOURCE_GROUP >/dev/null 2>&1 || \
               az group create --name $RESOURCE_GROUP --location $LOCATION
 
               az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME >/dev/null 2>&1 || \
@@ -74,39 +61,28 @@ stages:
                 --memory 1.5 \
                 --dns-name-label "${ACI_NAME}-dns-${BUILD_BUILDID}" \
                 --ip-address public \
-                --environment-variables \
-                    MYSQL_ROOT_PASSWORD="$DB_PASSWORD" \
-                    MYSQL_DATABASE="$DB_NAME" \
-                    MYSQL_USER="$DB_USER" \
-                    MYSQL_PASSWORD="$DB_PASSWORD" \
+                --environment-variables MYSQL_ROOT_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$DB_NAME" MYSQL_USER="$DB_USER" MYSQL_PASSWORD="$DB_PASSWORD" \
                 --restart-policy Always
 
-              echo "Aguardando MySQL em execução..."
               DB_IP=""
               while [ -z "$DB_IP" ]; do
                 DB_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query ipAddress.ip -o tsv)
                 [ -z "$DB_IP" ] && sleep 5
               done
-              echo "MySQL pronto em $DB_IP"
               echo "##vso[task.setvariable variable=DB_IP]$DB_IP"
 
-# --------------------- Deploy ---------------------
 - stage: Deploy
   displayName: "Deploy Web App"
   dependsOn: MySQL
-  condition: succeeded()
   jobs:
     - deployment: DeployWebApp
-      displayName: "Deploy Web App"
-      environment: "Production"
+      environment: Production
       strategy:
         runOnce:
           deploy:
             steps:
               - checkout: self
-
               - task: AzureCLI@2
-                displayName: "Criar Web App e App Service Plan se não existir"
                 inputs:
                   azureSubscription: "mottuflow-connection"
                   scriptType: bash
@@ -117,7 +93,7 @@ stages:
 
                     az webapp show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP >/dev/null 2>&1 || \
                     az webapp create --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --plan $APP_PLAN --runtime "JAVA|21-java21"
-                    
+
               - task: DownloadBuildArtifacts@1
                 inputs:
                   buildType: 'current'
@@ -126,15 +102,13 @@ stages:
                   downloadPath: '$(Pipeline.Workspace)/demo'
 
               - task: AzureWebApp@1
-                displayName: "Deploy to Azure Web App"
                 inputs:
                   azureSubscription: "mottuflow-connection"
                   appType: "webAppLinux"
                   appName: "$(WEBAPP_NAME)"
-                  package: $(Pipeline.Workspace)/demo/MottuFlow/target/*.jar
+                  package: "$(Pipeline.Workspace)/demo/*.jar"
 
               - task: AzureCLI@2
-                displayName: "Set DB settings in Web App"
                 inputs:
                   azureSubscription: "mottuflow-connection"
                   scriptType: bash
