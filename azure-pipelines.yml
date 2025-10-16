@@ -5,96 +5,180 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  DB_USER: "mottuuser"
-  DB_PASSWORD: "MottuPass123!"
-  DB_NAME: "mottuflow"
-  RESOURCE_GROUP: "sprint-mottuflow"
-  WEBAPP_NAME: "mottuflow-app"
-  APP_PLAN: "mottuflow-plan"
-  LOCATION: "brazilsouth"
-  ACI_NAME: "mottuflow-db"
-  CONTAINER_IMAGE: "mysql:8.0"
+  - group: mottuflow-secrets
+
+  - name: RESOURCE_GROUP
+    value: "sprint-mottuflow"
+
+  - name: WEBAPP_NAME
+    value: "mottuflow-app"
+
+  - name: APP_PLAN
+    value: "mottuflow-plan"
+
+  - name: LOCATION
+    value: "brazilsouth"
+
+  - name: ACI_NAME
+    value: "mottuflow-db"
+    
+  - name: CONTAINER_IMAGE
+    value: "mysql:8.0"
 
 stages:
 
-- stage: Build
-  displayName: "Build Stage"
+# --------------------- Construção ---------------------
+- stage: Construcao
+  displayName: "Estágio de Construção"
   jobs:
-    - job: Build
+    - job: Construir
+      displayName: "Construir Aplicação"
       container: maven:3.9.11-eclipse-temurin-21-noble
       steps:
         - checkout: self
+
         - task: Maven@4
+          displayName: "Build com Maven"
           inputs:
             mavenPomFile: "MottuFlow/pom.xml"
             goals: "clean package -DskipTests=true"
+            publishJUnitResults: true
+            testResultsFiles: "**/surefire-reports/TEST-*.xml"
+
         - task: CopyFiles@2
+          displayName: "Copiar JAR para artefato"
           inputs:
             SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow/target"
             Contents: "*.jar"
             TargetFolder: "$(Build.ArtifactStagingDirectory)"
+
         - publish: $(Build.ArtifactStagingDirectory)
           artifact: demo
+          displayName: "Publicar artefato"
 
-- stage: MySQL
-  displayName: "Provision MySQL ACI"
-  dependsOn: Build
+# --------------------- Banco de Dados ---------------------
+- stage: BancoDados
+  displayName: "Estágio de Provisionamento do Banco de Dados"
+  dependsOn: Construcao
   jobs:
-    - job: CreateACI
+    - job: CriarMySQL
+      displayName: "Criar Container MySQL"
       steps:
+        - checkout: self
+
         - task: AzureCLI@2
+          displayName: "Provisionar MySQL no ACI"
           inputs:
             azureSubscription: "mottuflow-connection"
             scriptType: bash
             scriptLocation: inlineScript
             inlineScript: |
+              set -e
+
+              DB_USER=$(DB_USER)
+              DB_PASSWORD=$(DB_PASSWORD)
+              DB_NAME=$(DB_NAME)
+
+              echo "Criando resource group..."
+              az group show --name $RESOURCE_GROUP >/dev/null 2>&1 || \
               az group create --name $RESOURCE_GROUP --location $LOCATION
 
-              az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME >/dev/null 2>&1 || \
-              az container create \
-                --resource-group $RESOURCE_GROUP \
-                --name $ACI_NAME \
-                --image $CONTAINER_IMAGE \
-                --ports 3306 \
-                --os-type Linux \
-                --cpu 1 \
-                --memory 1.5 \
-                --dns-name-label "${ACI_NAME}-dns-${BUILD_BUILDID}" \
-                --ip-address public \
-                --environment-variables MYSQL_ROOT_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$DB_NAME" MYSQL_USER="$DB_USER" MYSQL_PASSWORD="$DB_PASSWORD" \
-                --restart-policy Always
+              echo "Verificando container MySQL..."
+              if ! az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME >/dev/null 2>&1; then
+                echo "Criando container MySQL..."
+                az container create \
+                  --resource-group $RESOURCE_GROUP \
+                  --name $ACI_NAME \
+                  --image $CONTAINER_IMAGE \
+                  --ports 3306 \
+                  --os-type Linux \
+                  --cpu 1 --memory 1.5 \
+                  --dns-name-label "${ACI_NAME}-dns-${BUILD_BUILDID}" \
+                  --ip-address public \
+                  --environment-variables MYSQL_ROOT_PASSWORD="$DB_PASSWORD" MYSQL_DATABASE="$DB_NAME" MYSQL_USER="$DB_USER" MYSQL_PASSWORD="$DB_PASSWORD" \
+                  --restart-policy Always
+              fi
 
+              echo "Aguardando MySQL ficar disponível..."
               DB_IP=""
-              while [ -z "$DB_IP" ]; do
-                DB_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query ipAddress.ip -o tsv)
-                [ -z "$DB_IP" ] && sleep 5
-              done
-              echo "##vso[task.setvariable variable=DB_IP]$DB_IP"
+              TIMEOUT=300
+              ELAPSED=0
 
-- stage: Deploy
-  displayName: "Deploy Web App"
-  dependsOn: MySQL
+              while [ -z "$DB_IP" ] && [ $ELAPSED -lt $TIMEOUT ]; do
+                DB_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query ipAddress.ip -o tsv 2>/dev/null || echo "")
+                if [ -z "$DB_IP" ]; then
+                  sleep 5
+                  ELAPSED=$((ELAPSED + 5))
+                fi
+              done
+
+              if [ -z "$DB_IP" ]; then
+                echo "Erro: Timeout ao aguardar IP do MySQL"
+                exit 1
+              fi
+
+              echo "Validando conectividade com MySQL em $DB_IP..."
+              RETRY=0
+              while ! nc -z -w 5 $DB_IP 3306 2>/dev/null && [ $RETRY -lt 60 ]; do
+                echo "Tentativa $((RETRY + 1))/60 - MySQL não está respondendo ainda..."
+                sleep 5
+                RETRY=$((RETRY + 1))
+              done
+
+              if [ $RETRY -eq 60 ]; then
+                echo "Erro: MySQL não respondeu após 5 minutos"
+                exit 1
+              fi
+
+              echo "MySQL pronto em $DB_IP:3306"
+              echo "##vso[task.setvariable variable=DB_IP;isOutput=true]$DB_IP"
+
+        - task: AzureCLI@2
+          displayName: "Salvar IP do Banco de Dados"
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              DB_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query ipAddress.ip -o tsv)
+              echo "##vso[task.setvariable variable=DB_IP]$DB_IP"
+              echo "DB_IP armazenado: $DB_IP"
+
+# --------------------- Implantação ---------------------
+- stage: Implantacao
+  displayName: "Estágio de Implantação"
+  dependsOn: BancoDados
+  variables:
+    DB_IP: $[ dependencies.BancoDados.outputs['CriarMySQL.DB_IP'] ]
   jobs:
-    - deployment: DeployWebApp
-      environment: Production
+    - deployment: ImplantarAplicacao
+      displayName: "Implantar Aplicação Web"
+      environment: "Produção"
       strategy:
         runOnce:
           deploy:
             steps:
               - checkout: self
+
               - task: AzureCLI@2
+                displayName: "Criar Plano e Aplicação Web"
                 inputs:
                   azureSubscription: "mottuflow-connection"
                   scriptType: bash
                   scriptLocation: inlineScript
                   inlineScript: |
+                    set -e
+
+                    echo "Verificando plano de serviço..."
                     az appservice plan show --name $APP_PLAN --resource-group $RESOURCE_GROUP >/dev/null 2>&1 || \
                     az appservice plan create --name $APP_PLAN --resource-group $RESOURCE_GROUP --sku B1 --is-linux --location $LOCATION
 
+                    echo "Verificando aplicação web..."
                     az webapp show --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP >/dev/null 2>&1 || \
                     az webapp create --name $WEBAPP_NAME --resource-group $RESOURCE_GROUP --plan $APP_PLAN --runtime "JAVA|21-java21"
 
               - task: DownloadBuildArtifacts@1
+                displayName: "Baixar Artefato da Construção"
                 inputs:
                   buildType: 'current'
                   downloadType: 'single'
@@ -102,19 +186,57 @@ stages:
                   downloadPath: '$(Pipeline.Workspace)/demo'
 
               - task: AzureWebApp@1
+                displayName: "Implantar Arquivo JAR"
                 inputs:
                   azureSubscription: "mottuflow-connection"
                   appType: "webAppLinux"
                   appName: "$(WEBAPP_NAME)"
-                  package: "$(Pipeline.Workspace)/demo/*.jar"
+                  package: $(Pipeline.Workspace)/demo/*.jar
 
               - task: AzureCLI@2
+                displayName: "Configurar Variáveis de Ambiente"
                 inputs:
                   azureSubscription: "mottuflow-connection"
                   scriptType: bash
                   scriptLocation: inlineScript
                   inlineScript: |
+                    DB_USER=$(DB_USER)
+                    DB_PASSWORD=$(DB_PASSWORD)
+                    DB_NAME=$(DB_NAME)
+
+                    echo "Configurando conexão com banco de dados..."
                     az webapp config appsettings set \
                       --name $WEBAPP_NAME \
                       --resource-group $RESOURCE_GROUP \
-                      --settings DB_HOST=$(DB_IP) DB_PORT=3306 DB_NAME=$DB_NAME DB_USER=$DB_USER DB_PASSWORD=$DB_PASSWORD
+                      --settings \
+                        DB_HOST=$(DB_IP) \
+                        DB_PORT=3306 \
+                        DB_NAME=$DB_NAME \
+                        DB_USER=$DB_USER \
+                        DB_PASSWORD=$DB_PASSWORD
+
+              - task: AzureCLI@2
+                displayName: "Validar Implantação"
+                inputs:
+                  azureSubscription: "mottuflow-connection"
+                  scriptType: bash
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    echo "Aguardando aplicação inicializar..."
+                    sleep 10
+
+                    APP_URL="https://$(WEBAPP_NAME).azurewebsites.net"
+                    echo "Verificando saúde da aplicação em $APP_URL"
+
+                    for i in {1..10}; do
+                      HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL || echo "000")
+                      if [ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" != "502" ]; then
+                        echo "✓ Aplicação respondendo com status $HTTP_CODE"
+                        exit 0
+                      fi
+                      echo "Tentativa $i/10 - Status: $HTTP_CODE"
+                      sleep 5
+                    done
+
+                    echo "⚠ Aplicação não respondeu após 60 segundos"
+                    exit 0
