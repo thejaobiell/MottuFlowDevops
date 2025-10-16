@@ -75,8 +75,8 @@ stages:
               DB_PASSWORD=$(DB_PASSWORD)
               DB_NAME=$(DB_NAME)
 
-              DOCKER_USER=$(DOCKERHUB_USER)       # variável do DevOps
-              DOCKER_PASS=$(DOCKERHUB_PASSWORD)   # variável do DevOps
+              DOCKER_USER=$(DOCKERHUB_USER)
+              DOCKER_PASS=$(DOCKERHUB_PASSWORD)
 
               echo "Criando resource group..."
               az group show --name $RESOURCE_GROUP >/dev/null 2>&1 || \
@@ -85,6 +85,11 @@ stages:
               echo "Verificando container MySQL..."
               if ! az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME >/dev/null 2>&1; then
                 echo "Criando container MySQL..."
+                
+                --registry-login-server index.docker.io \
+                --registry-username $DOCKER_USER \
+                --registry-password $DOCKER_PASS
+
                 az container create \
                   --resource-group $RESOURCE_GROUP \
                   --name $ACI_NAME \
