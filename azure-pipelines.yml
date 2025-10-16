@@ -82,8 +82,9 @@ stages:
         testResultsFiles: '**/surefire-reports/TEST-*.xml'
       env:
         JAVA_HOME: $(JAVA_HOME_21_X64)
-        DB_HOST: $(DB_IP)
+        DB_HOST: localhost
         DB_PORT: 3306
-        DB_USER: $(DB_USER)
-        DB_PASSWORD: $(DB_PASSWORD)
+        DB_USER: root
+        DB_PASSWORD: root
         DB_NAME: mottuflow
+
