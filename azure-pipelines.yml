@@ -22,7 +22,7 @@ stages:
       displayName: 'Instalar JDK 21'
       inputs:
         versionSpec: '21'
-        jdkArchitecture: 'x64'
+        jdkArchitectureOption: 'x64'
         jdkSourceOption: 'PreInstalled'
 
     - task: Maven@4
