@@ -8,49 +8,26 @@ variables:
   - group: mottuflow-secrets
   - name: RESOURCE_GROUP
     value: "sprint-mottuflow"
-  - name: WEBAPP_NAME
-    value: "mottuflow-app"
-  - name: APP_PLAN
-    value: "mottuflow-plan"
   - name: LOCATION
     value: "brazilsouth"
   - name: ACI_NAME
     value: "mottuflow-db"
+  - name: ACI_APP_NAME
+    value: "mottuflow-container-app"
   - name: CONTAINER_IMAGE
     value: "mysql:8.0.34"
+  - name: DOCKER_REGISTRY
+    value: "index.docker.io"
+  - name: DOCKER_IMAGE_NAME
+    value: "$(DOCKERHUB_USER)/mottuflow-app"
+  - name: DOCKER_IMAGE_TAG
+    value: "$(Build.BuildId)"
 
 stages:
-
-# --------------------- Build ---------------------
-- stage: Build
-  displayName: "Build"
-  jobs:
-    - job: BuildApp
-      container: maven:3.9.11-eclipse-temurin-21-noble
-      steps:
-        - checkout: self
-
-        - task: Maven@4
-          displayName: "Build Maven"
-          inputs:
-            mavenPomFile: "MottuFlow/pom.xml"
-            goals: "clean package -DskipTests=true"
-
-        - task: CopyFiles@2
-          displayName: "Copiar JAR para artefato"
-          inputs:
-            SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow/target"
-            Contents: "*.jar"
-            TargetFolder: "$(Build.ArtifactStagingDirectory)"
-
-        - publish: $(Build.ArtifactStagingDirectory)
-          artifact: demo
-          displayName: "Publicar artefato JAR"
 
 # --------------------- Banco de Dados ---------------------
 - stage: BancoDados
   displayName: "Estágio de Provisionamento do Banco de Dados"
-  dependsOn: Build
   jobs:
     - job: CriarMySQL
       displayName: "Criar Container MySQL"
@@ -137,14 +114,106 @@ stages:
               echo "##vso[task.setvariable variable=DB_IP;isOutput=true]$DB_IP"
               echo "DB_IP setada como output: $DB_IP"
 
-# --------------------- Deploy ---------------------
-- stage: Deploy
+# --------------------- Build e Testes ---------------------
+- stage: BuildAndTest
+  displayName: "Build e Testes"
   dependsOn: BancoDados
-  displayName: "Deploy"
   variables:
     DB_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['ProvisarMySQL.DB_IP'] ]
   jobs:
-    - job: DeployApp
+    - job: BuildTestApp
+      displayName: "Build e Testes da Aplicação"
+      container: maven:3.9.11-eclipse-temurin-21-noble
+      steps:
+        - checkout: self
+
+        - task: AzureCLI@2
+          displayName: "Obter IP do MySQL"
+          name: GetDBIP
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              DB_IP=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_NAME) --query ipAddress.ip -o tsv)
+              echo "DB_IP obtida: $DB_IP"
+              echo "##vso[task.setvariable variable=DB_IP;isOutput=true]$DB_IP"
+
+        - task: Maven@4
+          displayName: "Build Maven com Testes"
+          env:
+            DB_HOST: $(GetDBIP.DB_IP)
+            DB_PORT: "3306"
+            DB_NAME: $(DB_NAME)
+            DB_USER: $(DB_USER)
+            DB_PASSWORD: $(DB_PASSWORD)
+            SERVER_PORT: "8080"
+          inputs:
+            mavenPomFile: "MottuFlow/pom.xml"
+            goals: "clean package -B"
+
+        - task: CopyFiles@2
+          displayName: "Copiar JAR para artefato"
+          inputs:
+            SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow/target"
+            Contents: "*.jar"
+            TargetFolder: "$(Build.ArtifactStagingDirectory)"
+
+        - publish: $(Build.ArtifactStagingDirectory)
+          artifact: demo
+          displayName: "Publicar artefato JAR"
+
+        - publish: $(System.DefaultWorkingDirectory)/MottuFlow
+          artifact: dockerfile
+          displayName: "Publicar Dockerfile e fonte"
+
+# --------------------- Build Docker e Push ---------------------
+- stage: BuildDocker
+  displayName: "Build Docker e Push"
+  dependsOn: BuildAndTest
+  jobs:
+    - job: BuildPushDocker
+      displayName: "Build e Push da Imagem Docker"
+      steps:
+        - checkout: self
+
+        - task: Docker@2
+          displayName: "Build Docker Image"
+          inputs:
+            command: build
+            Dockerfile: "MottuFlow/Dockerfile"
+            repository: "$(DOCKER_IMAGE_NAME)"
+            tags: |
+              $(DOCKER_IMAGE_TAG)
+              latest
+            arguments: "--build-arg BUILDKIT_INLINE_CACHE=1"
+
+        - task: Docker@2
+          displayName: "Login Docker Hub"
+          inputs:
+            command: login
+            containerRegistry: dockerhubConnection
+
+        - task: Docker@2
+          displayName: "Push Docker Image"
+          inputs:
+            command: push
+            repository: "$(DOCKER_IMAGE_NAME)"
+            tags: |
+              $(DOCKER_IMAGE_TAG)
+              latest
+
+# --------------------- Deploy em ACI ---------------------
+- stage: Deploy
+  dependsOn: 
+    - BancoDados
+    - BuildDocker
+  displayName: "Deploy em Azure Container Instance"
+  variables:
+    DB_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['ProvisarMySQL.DB_IP'] ]
+  jobs:
+    - job: DeployACI
+      displayName: "Deployar Aplicação em ACI"
       steps:
         - checkout: none
 
@@ -163,7 +232,7 @@ stages:
               echo "DB_IP validada com sucesso: $(DB_IP)"
 
         - task: AzureCLI@2
-          displayName: "Configurar WebApp e Variáveis"
+          displayName: "Deploy Aplicação em ACI"
           inputs:
             azureSubscription: "mottuflow-connection"
             scriptType: bash
@@ -172,62 +241,48 @@ stages:
               set -e
 
               DB_IP_VALUE=$(DB_IP)
-              echo "DB_IP recebida: $DB_IP_VALUE"
-              
-              if [ -z "$DB_IP_VALUE" ]; then
-                echo "Recuperando DB_IP do ACI..."
-                DB_IP_VALUE=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_NAME) --query ipAddress.ip -o tsv)
-                echo "DB_IP recuperada: $DB_IP_VALUE"
-              fi
+              DOCKER_USER=$(DOCKERHUB_USER)
+              DOCKER_PASS=$(DOCKERHUB_PASSWORD)
+              DB_PASSWORD=$(DB_PASSWORD)
 
-              if [ -z "$DB_IP_VALUE" ]; then
-                echo "Erro crítico: Não foi possível obter DB_IP"
-                exit 1
-              fi
+              echo "Iniciando deploy da aplicação em ACI..."
+              echo "DB_IP: $DB_IP_VALUE"
+              echo "Imagem Docker: $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)"
 
-              echo "Iniciando configuração do WebApp..."
-              echo "DB_IP recebida: $DB_IP_VALUE"
-              echo "Resource Group: $(RESOURCE_GROUP)"
-              echo "WebApp: $(WEBAPP_NAME)"
-              echo "Plano: $(APP_PLAN)"
+              # Remover container anterior se existir
+              az container delete \
+                --resource-group $(RESOURCE_GROUP) \
+                --name $(ACI_APP_NAME) \
+                --yes >/dev/null 2>&1 || echo "Nenhum container anterior para remover"
 
-              echo "Verificando plano de serviço..."
-              az appservice plan show -n $(APP_PLAN) -g $(RESOURCE_GROUP) >/dev/null 2>&1 || \
-              az appservice plan create -n $(APP_PLAN) -g $(RESOURCE_GROUP) --sku B1 --is-linux -l $(LOCATION)
+              sleep 5
 
-              echo "Verificando aplicação web..."
-              if ! az webapp show -n $(WEBAPP_NAME) -g $(RESOURCE_GROUP) >/dev/null 2>&1; then
-                echo "Criando nova aplicação web..."
-                az webapp create -n $(WEBAPP_NAME) -g $(RESOURCE_GROUP) -p $(APP_PLAN) --runtime "JAVA|21-java21"
-              else
-                echo "Aplicação já existe. Atualizando variáveis..."
-              fi
-
-              echo "Aplicando variáveis de ambiente..."
-              az webapp config appsettings set \
-                -n $(WEBAPP_NAME) \
-                -g $(RESOURCE_GROUP) \
-                --settings \
+              # Criar novo container
+              az container create \
+                --resource-group $(RESOURCE_GROUP) \
+                --name $(ACI_APP_NAME) \
+                --image "$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)" \
+                --ports 8080 \
+                --os-type Linux \
+                --cpu 1 --memory 1.5 \
+                --dns-name-label "mottuflow-app-dns-${BUILD_BUILDID}" \
+                --ip-address public \
+                --environment-variables \
                   DB_HOST="$DB_IP_VALUE" \
                   DB_PORT="3306" \
                   DB_NAME="$(DB_NAME)" \
                   DB_USER="$(DB_USER)" \
-                  DB_PASSWORD="$(DB_PASSWORD)" \
-                  JAVA_OPTS="-Xmx768M -Xms512M -XX:+TieredCompilation -XX:TieredStopAtLevel=4" \
-                  SERVER_COMPRESSION_ENABLED="true"
+                  DB_PASSWORD="$DB_PASSWORD" \
+                  SERVER_PORT="8080" \
+                --restart-policy Always \
+                --registry-login-server $(DOCKER_REGISTRY) \
+                --registry-username $DOCKER_USER \
+                --registry-password $DOCKER_PASS
 
-              echo "Configuração de ambiente concluída com sucesso."
-              echo "Listando variáveis configuradas:"
-              az webapp config appsettings list -n $(WEBAPP_NAME) -g $(RESOURCE_GROUP)
+              echo "Aguardando container ficar pronto..."
+              sleep 10
 
-        - download: current
-          artifact: demo
-
-        - task: AzureWebApp@1
-          displayName: "Implantar JAR no WebApp"
-          inputs:
-            azureSubscription: "mottuflow-connection"
-            appType: "webAppLinux"
-            appName: "$(WEBAPP_NAME)"
-            package: "$(Pipeline.Workspace)/demo/*.jar"
-            deploymentMethod: runFromPackage
+              APP_IP=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_APP_NAME) --query ipAddress.ip -o tsv)
+              echo "✅ Aplicação deployada com sucesso!"
+              echo "🌐 URL: http://$APP_IP:8080"
+              echo "##vso[task.setvariable variable=APP_IP]$APP_IP"
