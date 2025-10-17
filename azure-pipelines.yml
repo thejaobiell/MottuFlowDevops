@@ -18,8 +18,6 @@ variables:
     value: "mottuflow-db"
   - name: CONTAINER_IMAGE
     value: "mysql:8.0.34"
-  - name: ACR_LOGIN_SERVER
-    value: "seu-acr-name.azurecr.io"
 
 stages:
 
@@ -170,7 +168,7 @@ stages:
               echo "DB_IP validada com sucesso: $(DB_IP)"
 
         - task: AzureCLI@2
-          displayName: "Criar Plano e Aplicação Web"
+          displayName: "Criar Plano e Aplicação Web com Variáveis"
           inputs:
             azureSubscription: "mottuflow-connection"
             scriptType: bash
@@ -178,13 +176,63 @@ stages:
             inlineScript: |
               set -e
 
+              DB_IP_VALUE=$(DB_IP)
+              echo "DB_IP recebida: $DB_IP_VALUE"
+              
+              if [ -z "$DB_IP_VALUE" ]; then
+                echo "Recuperando DB_IP do ACI..."
+                DB_IP_VALUE=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_NAME) --query ipAddress.ip -o tsv)
+                echo "DB_IP recuperada: $DB_IP_VALUE"
+              fi
+
+              if [ -z "$DB_IP_VALUE" ]; then
+                echo "Erro crítico: Não foi possível obter DB_IP"
+                exit 1
+              fi
+
               echo "Verificando plano de serviço..."
               az appservice plan show --name $(APP_PLAN) --resource-group $(RESOURCE_GROUP) >/dev/null 2>&1 || \
               az appservice plan create --name $(APP_PLAN) --resource-group $(RESOURCE_GROUP) --sku B1 --is-linux --location $(LOCATION)
 
               echo "Verificando aplicação web..."
-              az webapp show --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) >/dev/null 2>&1 || \
-              az webapp create --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) --plan $(APP_PLAN) --runtime "JAVA|21-java21"
+              if ! az webapp show --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) >/dev/null 2>&1; then
+                echo "Criando aplicação web com variáveis de ambiente..."
+                az webapp create --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) --plan $(APP_PLAN) --runtime "JAVA|21-java21"
+                
+                echo "Configurando variáveis de ambiente na criação..."
+                az webapp config appsettings set \
+                  --name $(WEBAPP_NAME) \
+                  --resource-group $(RESOURCE_GROUP) \
+                  --settings \
+                    DB_HOST="$DB_IP_VALUE" \
+                    DB_PORT="3306" \
+                    DB_NAME="$(DB_NAME)" \
+                    DB_USER="$(DB_USER)" \
+                    DB_PASSWORD="$(DB_PASSWORD)"
+                
+                echo "Variáveis configuradas na criação!"
+              else
+                echo "Webapp já existe, atualizando variáveis de ambiente..."
+                az webapp config appsettings set \
+                  --name $(WEBAPP_NAME) \
+                  --resource-group $(RESOURCE_GROUP) \
+                  --settings \
+                    DB_HOST="$DB_IP_VALUE" \
+                    DB_PORT="3306" \
+                    DB_NAME="$(DB_NAME)" \
+                    DB_USER="$(DB_USER)" \
+                    DB_PASSWORD="$(DB_PASSWORD)"
+              fi
+              
+              echo "Confirmando variáveis configuradas:"
+              az webapp config appsettings list --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP)
+              
+              echo ""
+              echo "Variáveis configuradas com sucesso!"
+              echo "DB_HOST: $DB_IP_VALUE"
+              echo "DB_PORT: 3306"
+              echo "DB_NAME: $(DB_NAME)"
+              echo "DB_USER: $(DB_USER)"
 
         - task: DownloadBuildArtifacts@1
           displayName: "Baixar Artefato da Construção"
@@ -193,6 +241,40 @@ stages:
             downloadType: 'single'
             artifactName: 'demo'
             downloadPath: '$(Pipeline.Workspace)/demo'
+
+        - task: AzureCLI@2
+          displayName: "Validar Conectividade MySQL antes de Implantar"
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              DB_IP_VALUE=$(DB_IP)
+              DB_USER=$(DB_USER)
+              DB_PASSWORD=$(DB_PASSWORD)
+              DB_NAME=$(DB_NAME)
+              
+              echo "Testando conexão com MySQL em $DB_IP_VALUE:3306"
+              echo "Usuário: $DB_USER"
+              echo "Banco: $DB_NAME"
+              
+              # Instalar mysql-client se necessário
+              apt-get update -qq && apt-get install -y -qq mysql-client >/dev/null 2>&1
+              
+              # Testar conexão
+              RETRY=0
+              while [ $RETRY -lt 30 ]; do
+                if mysql -h "$DB_IP_VALUE" -u "$DB_USER" -p"$DB_PASSWORD" -D "$DB_NAME" -e "SELECT 1" >/dev/null 2>&1; then
+                  echo "✓ Conexão com MySQL bem-sucedida!"
+                  exit 0
+                fi
+                RETRY=$((RETRY + 1))
+                echo "Tentativa $RETRY/30 - Aguardando MySQL..."
+                sleep 5
+              done
+              
+              echo "✗ Aviso: MySQL não respondeu após 150 segundos, mas continuando deployment"
+              exit 0
 
         - task: AzureWebApp@1
           displayName: "Implantar Arquivo JAR"
@@ -203,36 +285,43 @@ stages:
             package: $(Pipeline.Workspace)/demo/*.jar
 
         - task: AzureCLI@2
-          displayName: "Configurar Variáveis de Ambiente"
+          displayName: "Debug - Listar Variáveis de Ambiente"
           inputs:
             azureSubscription: "mottuflow-connection"
             scriptType: bash
             scriptLocation: inlineScript
             inlineScript: |
-              DB_IP_VALUE=$(DB_IP)
-              echo "Configurando com DB_IP: $DB_IP_VALUE"
-              
-              if [ -z "$DB_IP_VALUE" ]; then
-                echo "Erro: DB_IP está vazia, tentando recuperar de ACI..."
-                DB_IP_VALUE=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_NAME) --query ipAddress.ip -o tsv)
-                echo "DB_IP recuperada: $DB_IP_VALUE"
-              fi
+              echo "=========================================="
+              echo "Variáveis de ambiente do App Service:"
+              echo "=========================================="
+              az webapp config appsettings list --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) --output table
+              echo ""
 
-              if [ -z "$DB_IP_VALUE" ]; then
-                echo "Erro crítico: Não foi possível obter DB_IP"
-                exit 1
-              fi
+        - task: AzureCLI@2
+          displayName: "Validar Implantação"
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              echo "Aguardando aplicação inicializar (90 segundos)..."
+              sleep 90
 
-              echo "Aplicando configurações com DB_IP: $DB_IP_VALUE"
-              az webapp config appsettings set \
-                --name $(WEBAPP_NAME) \
-                --resource-group $(RESOURCE_GROUP) \
-                --settings \
-                  DB_HOST="$DB_IP_VALUE" \
-                  DB_PORT="3306" \
-                  DB_NAME="$(DB_NAME)" \
-                  DB_USER="$(DB_USER)" \
-                  DB_PASSWORD="$(DB_PASSWORD)"
+              APP_URL="https://$(WEBAPP_NAME).azurewebsites.net"
+              echo "Verificando saúde da aplicação em $APP_URL"
 
-              echo "Variáveis de ambiente configuradas com sucesso!"
-              az webapp config appsettings list --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) | grep -E "DB_HOST|DB_PORT|DB_NAME
+              for i in {1..20}; do
+                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL || echo "000")
+                if [ "$HTTP_CODE" = "200" ]; then
+                  echo "✓ Aplicação respondendo com status $HTTP_CODE"
+                  exit 0
+                fi
+                echo "Tentativa $i/20 - Status: $HTTP_CODE"
+                sleep 10
+              done
+
+              echo ""
+              echo "⚠ Aplicação não respondeu com status 200"
+              echo "Verificando logs para diagnóstico..."
+              echo "=========================================="
+              az webapp log tail --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) --tail 150
