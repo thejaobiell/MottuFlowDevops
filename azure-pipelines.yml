@@ -140,13 +140,27 @@ stages:
 # --------------------- Deploy ---------------------
 - stage: Deploy
   dependsOn: BancoDados
+  displayName: "Deploy"
   variables:
     DB_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['CriarMySQL.DB_IP'] ]
-  displayName: "Deploy"
   jobs:
     - job: DeployApp
       steps:
         - checkout: none
+
+        - task: AzureCLI@2
+          displayName: "Validar DB_IP"
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              echo "Validando DB_IP recebida: $(DB_IP)"
+              if [ -z "$(DB_IP)" ]; then
+                echo "Erro: DB_IP está vazia!"
+                exit 1
+              fi
+              echo "DB_IP validada com sucesso: $(DB_IP)"
 
         - task: AzureCLI@2
           displayName: "Configurar WebApp e Variáveis"
@@ -156,8 +170,23 @@ stages:
             scriptLocation: inlineScript
             inlineScript: |
               set -e
+
+              DB_IP_VALUE=$(DB_IP)
+              echo "DB_IP recebida: $DB_IP_VALUE"
+              
+              if [ -z "$DB_IP_VALUE" ]; then
+                echo "Recuperando DB_IP do ACI..."
+                DB_IP_VALUE=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_NAME) --query ipAddress.ip -o tsv)
+                echo "DB_IP recuperada: $DB_IP_VALUE"
+              fi
+
+              if [ -z "$DB_IP_VALUE" ]; then
+                echo "Erro crítico: Não foi possível obter DB_IP"
+                exit 1
+              fi
+
               echo "Iniciando configuração do WebApp..."
-              echo "DB_IP recebida: $(DB_IP)"
+              echo "DB_IP recebida: $DB_IP_VALUE"
               echo "Resource Group: $(RESOURCE_GROUP)"
               echo "WebApp: $(WEBAPP_NAME)"
               echo "Plano: $(APP_PLAN)"
@@ -179,7 +208,7 @@ stages:
                 -n $(WEBAPP_NAME) \
                 -g $(RESOURCE_GROUP) \
                 --settings \
-                  DB_HOST="$(DB_IP)" \
+                  DB_HOST="$DB_IP_VALUE" \
                   DB_PORT="3306" \
                   DB_NAME="$(DB_NAME)" \
                   DB_USER="$(DB_USER)" \
