@@ -209,7 +209,8 @@ stages:
                     DB_PORT="3306" \
                     DB_NAME="$(DB_NAME)" \
                     DB_USER="$(DB_USER)" \
-                    DB_PASSWORD="$(DB_PASSWORD)"
+                    DB_PASSWORD="$(DB_PASSWORD)" \
+                    JAVA_OPTS="-Xmx768M -Xms512M -XX:+TieredCompilation -XX:TieredStopAtLevel=4" 
                 
                 echo "Variáveis configuradas na criação!"
               else
@@ -222,7 +223,8 @@ stages:
                     DB_PORT="3306" \
                     DB_NAME="$(DB_NAME)" \
                     DB_USER="$(DB_USER)" \
-                    DB_PASSWORD="$(DB_PASSWORD)"
+                    DB_PASSWORD="$(DB_PASSWORD)" \
+                    JAVA_OPTS="-Xmx768M -Xms512M -XX:+TieredCompilation -XX:TieredStopAtLevel=4" 
               fi
               
               echo "Confirmando variáveis configuradas:"
@@ -261,7 +263,7 @@ stages:
                 echo "✓ Container MySQL está rodando corretamente"
                 exit 0
               else
-                echo "Status do container: $CONTAINER_STATUS"
+                echo "⚠ Status do container: $CONTAINER_STATUS"
                 exit 0
               fi
 
@@ -272,16 +274,3 @@ stages:
             appType: "webAppLinux"
             appName: "$(WEBAPP_NAME)"
             package: $(Pipeline.Workspace)/demo/*.jar
-
-        - task: AzureCLI@2
-          displayName: "Debug - Listar Variáveis de Ambiente"
-          inputs:
-            azureSubscription: "mottuflow-connection"
-            scriptType: bash
-            scriptLocation: inlineScript
-            inlineScript: |
-              echo "=========================================="
-              echo "Variáveis de ambiente do App Service:"
-              echo "=========================================="
-              az webapp config appsettings list --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) --output table
-              echo ""
