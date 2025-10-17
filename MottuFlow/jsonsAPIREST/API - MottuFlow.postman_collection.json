@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "8ba14ee2-7d92-43a3-90b1-6de1d3e44871",
+		"_postman_id": "2d6678fb-b100-479d-a5ee-a2e5a535dea4",
 		"name": "API - MottuFlow",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "39334205",
-		"_collection_link": "https://galactic-resonance-365575.postman.co/workspace/MottuFlow-Endpoints~479ea491-7731-4683-b0a4-56afc7df5c83/collection/39334205-8ba14ee2-7d92-43a3-90b1-6de1d3e44871?action=share&source=collection_link&creator=39334205"
+		"_collection_link": "https://galactic-resonance-365575.postman.co/workspace/MottuFlow-Endpoints~479ea491-7731-4683-b0a4-56afc7df5c83/collection/39334205-2d6678fb-b100-479d-a5ee-a2e5a535dea4?action=share&source=collection_link&creator=39334205"
 	},
 	"item": [
 		{
@@ -309,14 +309,14 @@
 							}
 						},
 						"url": {
-							"raw": "{{baseUrl}}/funcionario/editar/2",
+							"raw": "{{baseUrl}}/funcionario/editar/4",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"funcionario",
 								"editar",
-								"2"
+								"4"
 							]
 						}
 					},
@@ -2360,11 +2360,11 @@
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "http://localhost:8080/api"
+			"value": "http://mottuflow-app.brazilsouth.azurecontainer.io:8080/api"
 		},
 		{
 			"key": "jwt",
-			"value": ""
+			"value": "<mude aqui>"
 		}
 	]
 }
