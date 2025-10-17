@@ -64,6 +64,7 @@ stages:
 
         - task: AzureCLI@2
           displayName: "Provisionar MySQL no ACI"
+          name: ProvisarMySQL
           inputs:
             azureSubscription: "mottuflow-connection"
             scriptType: bash
@@ -102,19 +103,17 @@ stages:
               --registry-password $DOCKER_PASS
               fi
 
-              DB_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query ipAddress.ip -o tsv)
-              echo "##vso[task.setvariable variable=DB_IP;isOutput=true]$DB_IP"
-
               echo "Aguardando MySQL ficar disponível..."
-              DB_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query ipAddress.ip -o tsv)
               TIMEOUT=300
               ELAPSED=0
+              DB_IP=""
 
               while [ -z "$DB_IP" ] && [ $ELAPSED -lt $TIMEOUT ]; do
                 DB_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query ipAddress.ip -o tsv 2>/dev/null || echo "")
                 if [ -z "$DB_IP" ]; then
                   sleep 5
                   ELAPSED=$((ELAPSED + 5))
+                  echo "Aguardando IP... ($ELAPSED/$TIMEOUT segundos)"
                 fi
               done
 
@@ -122,6 +121,8 @@ stages:
                 echo "Erro: Timeout ao aguardar IP do MySQL"
                 exit 1
               fi
+
+              echo "IP obtido: $DB_IP"
 
               echo "Validando conectividade com MySQL em $DB_IP..."
               RETRY=0
@@ -137,19 +138,36 @@ stages:
               fi
 
               echo "MySQL pronto em $DB_IP:3306"
+              
+              # Exportar variável para próximos jobs
               echo "##vso[task.setvariable variable=DB_IP;isOutput=true]$DB_IP"
+              echo "DB_IP setada como output: $DB_IP"
 
 # --------------------- Implantação ---------------------
 - stage: Implantacao
   displayName: "Estágio de Implantação"
   dependsOn: BancoDados
   variables:
-    DB_IP: $[ dependencies.BancoDados.outputs['CriarMySQL.DB_IP'] ]
+    DB_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['ProvisarMySQL.DB_IP'] ]
   jobs:
     - job: ImplantarAplicacao
       displayName: "Implantar Aplicação Web"
       steps:
         - checkout: self
+
+        - task: AzureCLI@2
+          displayName: "Validar DB_IP"
+          inputs:
+            azureSubscription: "mottuflow-connection"
+            scriptType: bash
+            scriptLocation: inlineScript
+            inlineScript: |
+              echo "Validando DB_IP recebida: $(DB_IP)"
+              if [ -z "$(DB_IP)" ]; then
+                echo "Erro: DB_IP está vazia!"
+                exit 1
+              fi
+              echo "DB_IP validada com sucesso: $(DB_IP)"
 
         - task: AzureCLI@2
           displayName: "Criar Plano e Aplicação Web"
@@ -191,43 +209,30 @@ stages:
             scriptType: bash
             scriptLocation: inlineScript
             inlineScript: |
-              echo "DB_IP: $(DB_IP)"
-              echo "DB_USER: $(DB_USER)"
-              echo "DB_PASSWORD: $(DB_PASSWORD)"
-              echo "DB_NAME: $(DB_NAME)"
+              DB_IP_VALUE=$(DB_IP)
+              echo "Configurando com DB_IP: $DB_IP_VALUE"
+              
+              if [ -z "$DB_IP_VALUE" ]; then
+                echo "Erro: DB_IP está vazia, tentando recuperar de ACI..."
+                DB_IP_VALUE=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_NAME) --query ipAddress.ip -o tsv)
+                echo "DB_IP recuperada: $DB_IP_VALUE"
+              fi
 
+              if [ -z "$DB_IP_VALUE" ]; then
+                echo "Erro crítico: Não foi possível obter DB_IP"
+                exit 1
+              fi
+
+              echo "Aplicando configurações com DB_IP: $DB_IP_VALUE"
               az webapp config appsettings set \
                 --name $(WEBAPP_NAME) \
                 --resource-group $(RESOURCE_GROUP) \
                 --settings \
-                  DB_HOST="$(DB_IP)" \
-                  DB_PORT=3306 \
+                  DB_HOST="$DB_IP_VALUE" \
+                  DB_PORT="3306" \
                   DB_NAME="$(DB_NAME)" \
                   DB_USER="$(DB_USER)" \
                   DB_PASSWORD="$(DB_PASSWORD)"
 
-        - task: AzureCLI@2
-          displayName: "Validar Implantação"
-          inputs:
-            azureSubscription: "mottuflow-connection"
-            scriptType: bash
-            scriptLocation: inlineScript
-            inlineScript: |
-              echo "Aguardando aplicação inicializar..."
-              sleep 10
-
-              APP_URL="https://$(WEBAPP_NAME).azurewebsites.net"
-              echo "Verificando saúde da aplicação em $APP_URL"
-
-              for i in {1..10}; do
-                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL || echo "000")
-                if [ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" != "502" ]; then
-                  echo "✓ Aplicação respondendo com status $HTTP_CODE"
-                  exit 0
-                fi
-                echo "Tentativa $i/10 - Status: $HTTP_CODE"
-                sleep 5
-              done
-
-              echo "Aplicação não respondeu após 60 segundos"
-              exit 0
+              echo "Variáveis de ambiente configuradas com sucesso!"
+              az webapp config appsettings list --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) | grep -E "DB_HOST|DB_PORT|DB_NAME
