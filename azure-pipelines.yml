@@ -126,6 +126,13 @@ stages:
       steps:
         - checkout: self
 
+        - task: JavaToolInstaller@0
+          displayName: "Instalar Java 21"
+          inputs:
+            versionSpec: "21"
+            jdkArchitectureOption: "x64"
+            jdkSourceOption: "PreInstalled"
+
         - task: AzureCLI@2
           displayName: "Obter IP do MySQL"
           name: GetDBIP
