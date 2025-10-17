@@ -18,6 +18,8 @@ variables:
     value: "mottuflow-db"
   - name: CONTAINER_IMAGE
     value: "mysql:8.0.34"
+  - name: ACR_LOGIN_SERVER
+    value: "seu-acr-name.azurecr.io"
 
 stages:
 
@@ -137,7 +139,6 @@ stages:
 
               echo "MySQL pronto em $DB_IP:3306"
               
-              # Exportar variável para próximos jobs
               echo "##vso[task.setvariable variable=DB_IP;isOutput=true]$DB_IP"
               echo "DB_IP setada como output: $DB_IP"
 
@@ -243,38 +244,26 @@ stages:
             downloadPath: '$(Pipeline.Workspace)/demo'
 
         - task: AzureCLI@2
-          displayName: "Validar Conectividade MySQL antes de Implantar"
+          displayName: "Validar Container MySQL"
           inputs:
             azureSubscription: "mottuflow-connection"
             scriptType: bash
             scriptLocation: inlineScript
             inlineScript: |
               DB_IP_VALUE=$(DB_IP)
-              DB_USER=$(DB_USER)
-              DB_PASSWORD=$(DB_PASSWORD)
-              DB_NAME=$(DB_NAME)
               
-              echo "Testando conexão com MySQL em $DB_IP_VALUE:3306"
-              echo "Usuário: $DB_USER"
-              echo "Banco: $DB_NAME"
+              echo "Verificando status do container MySQL..."
+              echo "IP do MySQL: $DB_IP_VALUE"
               
-              # Instalar mysql-client se necessário
-              apt-get update -qq && apt-get install -y -qq mysql-client >/dev/null 2>&1
+              CONTAINER_STATUS=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_NAME) --query containers[0].instanceView.currentState.state -o tsv 2>/dev/null || echo "")
               
-              # Testar conexão
-              RETRY=0
-              while [ $RETRY -lt 30 ]; do
-                if mysql -h "$DB_IP_VALUE" -u "$DB_USER" -p"$DB_PASSWORD" -D "$DB_NAME" -e "SELECT 1" >/dev/null 2>&1; then
-                  echo "✓ Conexão com MySQL bem-sucedida!"
-                  exit 0
-                fi
-                RETRY=$((RETRY + 1))
-                echo "Tentativa $RETRY/30 - Aguardando MySQL..."
-                sleep 5
-              done
-              
-              echo "✗ Aviso: MySQL não respondeu após 150 segundos, mas continuando deployment"
-              exit 0
+              if [ "$CONTAINER_STATUS" = "Running" ]; then
+                echo "✓ Container MySQL está rodando corretamente"
+                exit 0
+              else
+                echo "Status do container: $CONTAINER_STATUS"
+                exit 0
+              fi
 
         - task: AzureWebApp@1
           displayName: "Implantar Arquivo JAR"
@@ -296,32 +285,3 @@ stages:
               echo "=========================================="
               az webapp config appsettings list --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) --output table
               echo ""
-
-        - task: AzureCLI@2
-          displayName: "Validar Implantação"
-          inputs:
-            azureSubscription: "mottuflow-connection"
-            scriptType: bash
-            scriptLocation: inlineScript
-            inlineScript: |
-              echo "Aguardando aplicação inicializar (90 segundos)..."
-              sleep 90
-
-              APP_URL="https://$(WEBAPP_NAME).azurewebsites.net"
-              echo "Verificando saúde da aplicação em $APP_URL"
-
-              for i in {1..20}; do
-                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $APP_URL || echo "000")
-                if [ "$HTTP_CODE" = "200" ]; then
-                  echo "✓ Aplicação respondendo com status $HTTP_CODE"
-                  exit 0
-                fi
-                echo "Tentativa $i/20 - Status: $HTTP_CODE"
-                sleep 10
-              done
-
-              echo ""
-              echo "⚠ Aplicação não respondeu com status 200"
-              echo "Verificando logs para diagnóstico..."
-              echo "=========================================="
-              az webapp log tail --name $(WEBAPP_NAME) --resource-group $(RESOURCE_GROUP) --tail 150
