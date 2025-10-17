@@ -142,7 +142,7 @@ stages:
   dependsOn: BancoDados
   displayName: "Deploy"
   variables:
-    DB_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['CriarMySQL.DB_IP'] ]
+    DB_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['ProvisarMySQL.DB_IP'] ]
   jobs:
     - job: DeployApp
       steps:
