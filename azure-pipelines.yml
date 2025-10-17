@@ -123,7 +123,6 @@ stages:
   jobs:
     - job: BuildTestApp
       displayName: "Build e Testes da Aplicação"
-      container: maven:3.9.11-eclipse-temurin-21-noble
       steps:
         - checkout: self
 
