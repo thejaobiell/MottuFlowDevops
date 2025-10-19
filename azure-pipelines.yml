@@ -179,13 +179,21 @@ stages:
     - job: BuildPushDocker
       displayName: "Build e Push da Imagem Docker"
       steps:
-        - checkout: self
+        - checkout: none
+
+        - task: DownloadBuildArtifacts@0
+          displayName: "Download do artefato aplicacao-docker"
+          inputs:
+            buildType: current
+            downloadType: single
+            artifactName: aplicacao-docker
+            downloadPath: $(System.ArtifactsDirectory)
 
         - task: Docker@2
           displayName: "Build Docker Image"
           inputs:
             command: build
-            Dockerfile: "MottuFlow/Dockerfile"
+            Dockerfile: "$(System.ArtifactsDirectory)/aplicacao-docker/Dockerfile"
             repository: "$(DOCKER_IMAGE_NAME)"
             tags: |
               $(DOCKER_IMAGE_TAG)
