@@ -159,17 +159,12 @@ stages:
             goals: "clean package -B"
 
         - task: CopyFiles@2
-          displayName: "Copiar JAR para staging"
-          inputs:
-            SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow/target"
-            Contents: "*.jar"
-            TargetFolder: "$(Build.ArtifactStagingDirectory)"
-
-        - task: CopyFiles@2
-          displayName: "Copiar Dockerfile para staging"
+          displayName: "Copiar artefatos para staging"
           inputs:
             SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow"
-            Contents: "Dockerfile"
+            Contents: |
+              target/*.jar
+              Dockerfile
             TargetFolder: "$(Build.ArtifactStagingDirectory)"
 
         - publish: $(Build.ArtifactStagingDirectory)
@@ -184,61 +179,18 @@ stages:
     - job: BuildPushDocker
       displayName: "Build e Push da Imagem Docker"
       steps:
-        - checkout: none
-
-        - task: DownloadBuildArtifacts@0
-          displayName: "Download do artefato aplicacao-docker"
-          inputs:
-            buildType: current
-            downloadType: single
-            artifactName: aplicacao-docker
-            downloadPath: $(Pipeline.Workspace)
-
-        - task: Bash@3
-          displayName: "Preparar contexto Docker"
-          inputs:
-            targetType: inline
-            script: |
-              echo "=== Estrutura de diretórios ==="
-              find $(Pipeline.Workspace) -type f -name "Dockerfile" -o -name "*.jar" | head -20
-              
-              DOCKERFILE_PATH=$(find $(Pipeline.Workspace) -name "Dockerfile" -type f | head -1)
-              echo "Dockerfile encontrado em: $DOCKERFILE_PATH"
-              
-              JAR_PATH=$(find $(Pipeline.Workspace) -name "*.jar" -type f | head -1)
-              echo "JAR encontrado em: $JAR_PATH"
-              
-              mkdir -p $(Pipeline.Workspace)/docker-build
-              
-              if [ -f "$DOCKERFILE_PATH" ]; then
-                cp "$DOCKERFILE_PATH" $(Pipeline.Workspace)/docker-build/
-                echo "✓ Dockerfile copiado"
-              fi
-              
-              if [ -f "$JAR_PATH" ]; then
-                cp "$JAR_PATH" $(Pipeline.Workspace)/docker-build/
-                echo "✓ JAR copiado"
-              fi
-              
-              echo "=== Conteúdo final do contexto de build ==="
-              ls -la $(Pipeline.Workspace)/docker-build/
+        - checkout: self
 
         - task: Docker@2
           displayName: "Build Docker Image"
           inputs:
             command: build
-            Dockerfile: "$(Pipeline.Workspace)/docker-build/Dockerfile"
+            Dockerfile: "MottuFlow/Dockerfile"
             repository: "$(DOCKER_IMAGE_NAME)"
             tags: |
               $(DOCKER_IMAGE_TAG)
               latest
-            arguments: >
-              --build-arg BUILDKIT_INLINE_CACHE=1
-              --build-arg DB_HOST=mottuflow-db
-              --build-arg DB_PORT=3306
-              --build-arg DB_NAME=$(DB_NAME)
-              --build-arg DB_USER=$(DB_USER)
-              --build-arg DB_PASSWORD=$(DB_PASSWORD)
+            arguments: "--build-arg BUILDKIT_INLINE_CACHE=1"
 
         - task: Docker@2
           displayName: "Login Docker Hub"
