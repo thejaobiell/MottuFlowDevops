@@ -159,19 +159,17 @@ stages:
             goals: "clean package -B"
 
         - task: CopyFiles@2
-          displayName: "Copiar JAR para artefato"
+          displayName: "Copiar artefatos para staging"
           inputs:
-            SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow/target"
-            Contents: "*.jar"
+            SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow"
+            Contents: |
+              target/*.jar
+              Dockerfile
             TargetFolder: "$(Build.ArtifactStagingDirectory)"
 
         - publish: $(Build.ArtifactStagingDirectory)
-          artifact: demo
-          displayName: "Publicar artefato JAR"
-
-        - publish: $(System.DefaultWorkingDirectory)/MottuFlow
-          artifact: dockerfile
-          displayName: "Publicar Dockerfile e fonte"
+          artifact: aplicacao-docker
+          displayName: "Publicar artefato aplicacao-docker"
 
 # --------------------- Build Docker e Push ---------------------
 - stage: BuildDocker
@@ -255,7 +253,6 @@ stages:
               echo "DB_IP: $DB_IP_VALUE"
               echo "Imagem Docker: $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)"
 
-              # Remover container anterior se existir
               az container delete \
                 --resource-group $(RESOURCE_GROUP) \
                 --name $(ACI_APP_NAME) \
@@ -263,7 +260,6 @@ stages:
 
               sleep 5
 
-              # Criar novo container
               az container create \
                 --resource-group $(RESOURCE_GROUP) \
                 --name $(ACI_APP_NAME) \
