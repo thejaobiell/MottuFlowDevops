@@ -179,18 +179,32 @@ stages:
     - job: BuildPushDocker
       displayName: "Build e Push da Imagem Docker"
       steps:
-        - checkout: self
+        - checkout: none
+
+        - task: DownloadBuildArtifacts@0
+          displayName: "Download do artefato aplicacao-docker"
+          inputs:
+            buildType: current
+            downloadType: single
+            artifactName: aplicacao-docker
+            downloadPath: $(System.ArtifactsDirectory)
 
         - task: Docker@2
           displayName: "Build Docker Image"
           inputs:
             command: build
-            Dockerfile: "MottuFlow/Dockerfile"
+            Dockerfile: "$(System.ArtifactsDirectory)/aplicacao-docker/Dockerfile"
             repository: "$(DOCKER_IMAGE_NAME)"
             tags: |
               $(DOCKER_IMAGE_TAG)
               latest
-            arguments: "--build-arg BUILDKIT_INLINE_CACHE=1"
+            arguments: >
+              --build-arg BUILDKIT_INLINE_CACHE=1
+              --build-arg DB_HOST=mottuflow-db
+              --build-arg DB_PORT=$(DB_PORT)
+              --build-arg DB_NAME=$(DB_NAME)
+              --build-arg DB_USER=$(DB_USER)
+              --build-arg DB_PASSWORD=$(DB_PASSWORD)
 
         - task: Docker@2
           displayName: "Login Docker Hub"
