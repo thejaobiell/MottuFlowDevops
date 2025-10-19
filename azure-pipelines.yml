@@ -194,6 +194,16 @@ stages:
             artifactName: aplicacao-docker
             downloadPath: $(Pipeline.Workspace)
 
+        - task: Bash@3
+          displayName: "Listar arquivos para debug"
+          inputs:
+            targetType: inline
+            script: |
+              echo "=== Conteúdo de $(Pipeline.Workspace) ==="
+              ls -la $(Pipeline.Workspace)/
+              echo "=== Conteúdo de $(Pipeline.Workspace)/aplicacao-docker ==="
+              ls -la $(Pipeline.Workspace)/aplicacao-docker/
+
         - task: Docker@2
           displayName: "Build Docker Image"
           inputs:
@@ -206,7 +216,7 @@ stages:
             arguments: >
               --build-arg BUILDKIT_INLINE_CACHE=1
               --build-arg DB_HOST=mottuflow-db
-              --build-arg DB_PORT=$(DB_PORT)
+              --build-arg DB_PORT=3306
               --build-arg DB_NAME=$(DB_NAME)
               --build-arg DB_USER=$(DB_USER)
               --build-arg DB_PASSWORD=$(DB_PASSWORD)
