@@ -159,12 +159,17 @@ stages:
             goals: "clean package -B"
 
         - task: CopyFiles@2
-          displayName: "Copiar artefatos para staging"
+          displayName: "Copiar JAR para staging"
+          inputs:
+            SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow/target"
+            Contents: "*.jar"
+            TargetFolder: "$(Build.ArtifactStagingDirectory)"
+
+        - task: CopyFiles@2
+          displayName: "Copiar Dockerfile para staging"
           inputs:
             SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow"
-            Contents: |
-              target/*.jar
-              Dockerfile
+            Contents: "Dockerfile"
             TargetFolder: "$(Build.ArtifactStagingDirectory)"
 
         - publish: $(Build.ArtifactStagingDirectory)
