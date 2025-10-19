@@ -192,13 +192,13 @@ stages:
             buildType: current
             downloadType: single
             artifactName: aplicacao-docker
-            downloadPath: $(System.ArtifactsDirectory)
+            downloadPath: $(Pipeline.Workspace)
 
         - task: Docker@2
           displayName: "Build Docker Image"
           inputs:
             command: build
-            Dockerfile: "$(System.ArtifactsDirectory)/aplicacao-docker/Dockerfile"
+            Dockerfile: "$(Pipeline.Workspace)/aplicacao-docker/Dockerfile"
             repository: "$(DOCKER_IMAGE_NAME)"
             tags: |
               $(DOCKER_IMAGE_TAG)
