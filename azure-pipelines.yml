@@ -195,20 +195,39 @@ stages:
             downloadPath: $(Pipeline.Workspace)
 
         - task: Bash@3
-          displayName: "Listar arquivos para debug"
+          displayName: "Preparar contexto Docker"
           inputs:
             targetType: inline
             script: |
-              echo "=== Conteúdo de $(Pipeline.Workspace) ==="
-              ls -la $(Pipeline.Workspace)/
-              echo "=== Conteúdo de $(Pipeline.Workspace)/aplicacao-docker ==="
-              ls -la $(Pipeline.Workspace)/aplicacao-docker/
+              echo "=== Estrutura de diretórios ==="
+              find $(Pipeline.Workspace) -type f -name "Dockerfile" -o -name "*.jar" | head -20
+              
+              DOCKERFILE_PATH=$(find $(Pipeline.Workspace) -name "Dockerfile" -type f | head -1)
+              echo "Dockerfile encontrado em: $DOCKERFILE_PATH"
+              
+              JAR_PATH=$(find $(Pipeline.Workspace) -name "*.jar" -type f | head -1)
+              echo "JAR encontrado em: $JAR_PATH"
+              
+              mkdir -p $(Pipeline.Workspace)/docker-build
+              
+              if [ -f "$DOCKERFILE_PATH" ]; then
+                cp "$DOCKERFILE_PATH" $(Pipeline.Workspace)/docker-build/
+                echo "✓ Dockerfile copiado"
+              fi
+              
+              if [ -f "$JAR_PATH" ]; then
+                cp "$JAR_PATH" $(Pipeline.Workspace)/docker-build/
+                echo "✓ JAR copiado"
+              fi
+              
+              echo "=== Conteúdo final do contexto de build ==="
+              ls -la $(Pipeline.Workspace)/docker-build/
 
         - task: Docker@2
           displayName: "Build Docker Image"
           inputs:
             command: build
-            Dockerfile: "$(Pipeline.Workspace)/aplicacao-docker/Dockerfile"
+            Dockerfile: "$(Pipeline.Workspace)/docker-build/Dockerfile"
             repository: "$(DOCKER_IMAGE_NAME)"
             tags: |
               $(DOCKER_IMAGE_TAG)
