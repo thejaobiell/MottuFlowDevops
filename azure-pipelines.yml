@@ -166,12 +166,8 @@ stages:
             TargetFolder: "$(Build.ArtifactStagingDirectory)"
 
         - publish: $(Build.ArtifactStagingDirectory)
-          artifact: demo
+          artifact: aplicacao
           displayName: "Publicar artefato JAR"
-
-        - publish: $(System.DefaultWorkingDirectory)/MottuFlow
-          artifact: dockerfile
-          displayName: "Publicar Dockerfile e fonte"
 
 # --------------------- Build Docker e Push ---------------------
 - stage: BuildDocker
