@@ -156,12 +156,12 @@ stages:
               echo "DB_IP obtida: $DB_IP"
               echo "##vso[task.setvariable variable=DB_IP;isOutput=true]$DB_IP"
 
-        # Build Maven com cache
         - script: mvn install -B -e
+          workingDirectory: MottuFlow  
           displayName: "Maven Install com cache"
 
         - task: Maven@4
-          displayName: "Build Maven com Testes"
+          displayName: "Build Maven com Testes e cache"
           env:
             DB_HOST: $(GetDBIP.DB_IP)
             DB_PORT: "3306"
@@ -173,7 +173,6 @@ stages:
             mavenPomFile: "MottuFlow/pom.xml"
             mavenOptions: '-Xmx3072m $(MAVEN_OPTS)'
             goals: "clean package -B"
-
 
 # --------------------- Build Docker e Push ---------------------
 - stage: BuildDocker
