@@ -182,16 +182,33 @@ stages:
       steps:
         - checkout: self
 
-        - task: Docker@2
-          displayName: "Build Docker Image"
+        - task: Cache@2
+          displayName: "Cache Docker layers"
           inputs:
-            command: build
-            Dockerfile: "MottuFlow/Dockerfile"
-            repository: "$(DOCKER_IMAGE_NAME)"
-            tags: |
-              $(DOCKER_IMAGE_TAG)
-              latest
-            arguments: "--build-arg BUILDKIT_INLINE_CACHE=1"
+            key: 'docker | "$(Agent.OS)" | MottuFlow/Dockerfile'
+            path: $(Pipeline.Workspace)/docker_cache
+            restoreKeys: |
+              docker | "$(Agent.OS)"
+
+        - script: |
+            docker buildx create --name mottuflow-builder --driver docker-container --use || true
+            docker buildx use mottuflow-builder
+          displayName: "Configurar Docker Buildx"
+          env:
+            DOCKER_BUILDKIT: 1
+
+        - script: |
+            docker buildx build \
+              --cache-from=type=local,src=$(Pipeline.Workspace)/docker_cache \
+              --cache-to=type=local,dest=$(Pipeline.Workspace)/docker_cache,mode=max \
+              --file MottuFlow/Dockerfile \
+              --tag $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG) \
+              --tag $(DOCKER_IMAGE_NAME):latest \
+              --load \
+              MottuFlow
+          displayName: "Build Docker Image com Buildx"
+          env:
+            DOCKER_BUILDKIT: 1
 
         - task: Docker@2
           displayName: "Login Docker Hub"
@@ -199,14 +216,10 @@ stages:
             command: login
             containerRegistry: dockerhubConnection
 
-        - task: Docker@2
-          displayName: "Push Docker Image"
-          inputs:
-            command: push
-            repository: "$(DOCKER_IMAGE_NAME)"
-            tags: |
-              $(DOCKER_IMAGE_TAG)
-              latest
+        - script: |
+            docker push $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)
+            docker push $(DOCKER_IMAGE_NAME):latest
+          displayName: "Push Docker Images"
 
 # --------------------- Deploy em ACI ---------------------
 - stage: Deploy
