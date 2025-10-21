@@ -174,6 +174,17 @@ stages:
             mavenOptions: '-Xmx3072m $(MAVEN_OPTS)'
             goals: "clean package -B"
 
+        - task: CopyFiles@2
+          displayName: "Copiar JAR para artefato"
+          inputs:
+            SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow/target"
+            Contents: "*.jar"
+            TargetFolder: "$(Build.ArtifactStagingDirectory)"
+
+        - publish: $(Build.ArtifactStagingDirectory)
+          artifact: aplicacao
+          displayName: "Publicar artefato JAR"
+
 # --------------------- Build Docker e Push ---------------------
 - stage: BuildDocker
   displayName: "Build Docker e Push"
