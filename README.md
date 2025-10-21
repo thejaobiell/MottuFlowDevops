@@ -14,7 +14,7 @@
 
   <br><br>
 
-  [![YouTube Demo](https://img.shields.io/badge/YouTube-Ver%20Demonstração-red?style=for-the-badge&logo=youtube)](***)
+  [![YouTube Demo](https://img.shields.io/badge/YouTube-Ver%20Demonstração-red?style=for-the-badge&logo=youtube)](https://youtu.be/ZSeNwQoHll4)
   [![Azure DevOps](https://img.shields.io/badge/Azure%20DevOps-Acesse%20Aqui-0078D7?style=for-the-badge&logo=azuredevops)](https://dev.azure.com/RM554874/Sprint4%E2%80%93AzureDevOps-MottuFlowDevops)
 
 </div>
@@ -48,9 +48,11 @@ O sistema oferece gerenciamento completo de:
 
 ```mermaid
 graph TB
+    DEV["👨‍💻 Desenvolvedor"]
+    
     subgraph GitHub["📦 SOURCE CONTROL"]
         REPO["GitHub Repository<br/>(Código-fonte)"]
-        MASTER["🔴 Branch Master"]
+        MASTER["🔴 Branch Main"]
     end
     
     subgraph AzureDevOps["🔷 AZURE DEVOPS"]
@@ -79,11 +81,15 @@ graph TB
         FLYWAY["🗂️ Flyway<br/>(Migrations)"]
         THYMELEAF["🖼️ Thymeleaf<br/>(Templates)"]
         WEB["🌐 Web Interface"]
+        APIREST["🔌 API REST"]
     end
     
+    FUNCIONARIO["👷 Funcionário<br/>(App Mobile)"]
+    GERENTE["👔 Gerente<br/>(Web)"]
+    
     %% Fluxo Principal
-    REPO -->|"git push main"| MASTER
-    MASTER -->|"webhook"| BancoDados
+    DEV -->|"git push"| REPO
+    REPO --> MASTER
     
     %% CI Flow
     BancoDados --> BuildAndTest
@@ -99,14 +105,22 @@ graph TB
     BancoDados -.->|"creates"| DB
     Deploy -->|"configures"| DB
     
+    %% Trigger
+    MASTER -->|"trigger automático"| BancoDados
+    
     %% Application Stack
     APP --> SPRING
     SPRING --> SECURITY
     SPRING --> FLYWAY
     SPRING --> THYMELEAF
+    SPRING --> APIREST
     FLYWAY --> DB
     SPRING --> DB
     THYMELEAF --> WEB
+    
+    %% Personas acessando a aplicação
+    APIREST -->|"acessa via mobile"| FUNCIONARIO
+    WEB -->|"acessa via browser"| GERENTE
     
     %% Estilos
     classDef github fill:#f0f0f0,stroke:#333,stroke-width:2px,color:#000
