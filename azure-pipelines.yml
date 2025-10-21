@@ -47,7 +47,6 @@ stages:
               DB_USER=$(DB_USER)
               DB_PASSWORD=$(DB_PASSWORD)
               DB_NAME=$(DB_NAME)
-
               DOCKER_USER=$(DOCKERHUB_USER)
               DOCKER_PASS=$(DOCKERHUB_PASSWORD)
 
@@ -78,27 +77,27 @@ stages:
               echo "Aguardando MySQL ficar disponível..."
               TIMEOUT=300
               ELAPSED=0
-              DB_IP=""
+              MYSQL_IP=""
 
-              while [ -z "$DB_IP" ] && [ $ELAPSED -lt $TIMEOUT ]; do
-                DB_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query ipAddress.ip -o tsv 2>/dev/null || echo "")
-                if [ -z "$DB_IP" ]; then
+              while [ -z "$MYSQL_IP" ] && [ $ELAPSED -lt $TIMEOUT ]; do
+                MYSQL_IP=$(az container show --resource-group $RESOURCE_GROUP --name $ACI_NAME --query ipAddress.ip -o tsv 2>/dev/null || echo "")
+                if [ -z "$MYSQL_IP" ]; then
                   sleep 5
                   ELAPSED=$((ELAPSED + 5))
                   echo "Aguardando IP... ($ELAPSED/$TIMEOUT segundos)"
                 fi
               done
 
-              if [ -z "$DB_IP" ]; then
+              if [ -z "$MYSQL_IP" ]; then
                 echo "Erro: Timeout ao aguardar IP do MySQL"
                 exit 1
               fi
 
-              echo "IP obtido: $DB_IP"
+              echo "IP obtido: $MYSQL_IP"
 
-              echo "Validando conectividade com MySQL em $DB_IP..."
+              echo "Validando conectividade com MySQL em $MYSQL_IP..."
               RETRY=0
-              while ! nc -z -w 5 $DB_IP 3306 2>/dev/null && [ $RETRY -lt 60 ]; do
+              while ! nc -z -w 5 $MYSQL_IP 3306 2>/dev/null && [ $RETRY -lt 60 ]; do
                 echo "Tentativa $((RETRY + 1))/60 - MySQL não está respondendo ainda..."
                 sleep 5
                 RETRY=$((RETRY + 1))
@@ -109,17 +108,15 @@ stages:
                 exit 1
               fi
 
-              echo "MySQL pronto em $DB_IP:3306"
-              
-              echo "##vso[task.setvariable variable=DB_IP;isOutput=true]$DB_IP"
-              echo "DB_IP setada como output: $DB_IP"
+              echo "MySQL pronto em $MYSQL_IP:3306"
+              echo "##vso[task.setvariable variable=MYSQL_IP;isOutput=true]$MYSQL_IP"
 
 # --------------------- Build e Testes ---------------------
 - stage: BuildAndTest
   displayName: "Build e Testes"
   dependsOn: BancoDados
   variables:
-    DB_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['ProvisarMySQL.DB_IP'] ]
+    MYSQL_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['ProvisarMySQL.MYSQL_IP'] ]
   jobs:
     - job: BuildTestApp
       displayName: "Build e Testes da Aplicação"
@@ -133,22 +130,10 @@ stages:
             jdkArchitectureOption: "x64"
             jdkSourceOption: "PreInstalled"
 
-        - task: AzureCLI@2
-          displayName: "Obter IP do MySQL"
-          name: GetDBIP
-          inputs:
-            azureSubscription: "mottuflow-connection"
-            scriptType: bash
-            scriptLocation: inlineScript
-            inlineScript: |
-              DB_IP=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_NAME) --query ipAddress.ip -o tsv)
-              echo "DB_IP obtida: $DB_IP"
-              echo "##vso[task.setvariable variable=DB_IP;isOutput=true]$DB_IP"
-
         - task: Maven@4
           displayName: "Build Maven com Testes"
           env:
-            DB_HOST: $(GetDBIP.DB_IP)
+            DB_HOST: $(MYSQL_IP)
             DB_PORT: "3306"
             DB_NAME: $(DB_NAME)
             DB_USER: $(DB_USER)
@@ -212,26 +197,12 @@ stages:
     - BuildDocker
   displayName: "Deploy em Azure Container Instance"
   variables:
-    DB_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['ProvisarMySQL.DB_IP'] ]
+    MYSQL_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['ProvisarMySQL.MYSQL_IP'] ]
   jobs:
     - job: DeployACI
       displayName: "Deployar Aplicação em ACI"
       steps:
         - checkout: none
-
-        - task: AzureCLI@2
-          displayName: "Validar DB_IP"
-          inputs:
-            azureSubscription: "mottuflow-connection"
-            scriptType: bash
-            scriptLocation: inlineScript
-            inlineScript: |
-              echo "Validando DB_IP recebida: $(DB_IP)"
-              if [ -z "$(DB_IP)" ]; then
-                echo "Erro: DB_IP está vazia!"
-                exit 1
-              fi
-              echo "DB_IP validada com sucesso: $(DB_IP)"
 
         - task: AzureCLI@2
           displayName: "Deploy Aplicação em ACI"
@@ -242,16 +213,19 @@ stages:
             inlineScript: |
               set -e
 
-              DB_IP_VALUE=$(DB_IP)
               DOCKER_USER=$(DOCKERHUB_USER)
               DOCKER_PASS=$(DOCKERHUB_PASSWORD)
               DB_PASSWORD=$(DB_PASSWORD)
 
               echo "Iniciando deploy da aplicação em ACI..."
-              echo "DB_IP: $DB_IP_VALUE"
+              echo "MySQL IP: $(MYSQL_IP)"
               echo "Imagem Docker: $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)"
 
-              # Remover container anterior se existir
+              if [ -z "$(MYSQL_IP)" ]; then
+                echo "Erro: MYSQL_IP não foi definido!"
+                exit 1
+              fi
+
               az container delete \
                 --resource-group $(RESOURCE_GROUP) \
                 --name $(ACI_APP_NAME) \
@@ -259,7 +233,6 @@ stages:
 
               sleep 5
 
-              # Criar novo container
               az container create \
                 --resource-group $(RESOURCE_GROUP) \
                 --name $(ACI_APP_NAME) \
@@ -270,7 +243,7 @@ stages:
                 --dns-name-label "mottuflow-app" \
                 --ip-address public \
                 --environment-variables \
-                  DB_HOST="$DB_IP_VALUE" \
+                  DB_HOST="$(MYSQL_IP)" \
                   DB_PORT="3306" \
                   DB_NAME="$(DB_NAME)" \
                   DB_USER="$(DB_USER)" \
@@ -287,4 +260,3 @@ stages:
               APP_FQDN=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_APP_NAME) --query ipAddress.fqdn -o tsv)
               echo "✅ Aplicação deployada com sucesso!"
               echo "🌐 URL: http://$APP_FQDN:8080"
-              echo "##vso[task.setvariable variable=APP_URL]http://$APP_FQDN:8080"
