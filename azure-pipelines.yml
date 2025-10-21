@@ -22,6 +22,10 @@ variables:
     value: "$(DOCKERHUB_USER)/mottuflow-app"
   - name: DOCKER_IMAGE_TAG
     value: "$(Build.BuildId)"
+  - name: MAVEN_CACHE_FOLDER
+    value: "$(Pipeline.Workspace)/.m2/repository"
+  - name: MAVEN_OPTS
+    value: "-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)"
 
 stages:
 
@@ -120,8 +124,6 @@ stages:
   dependsOn: BancoDados
   variables:
     DB_IP: $[ stageDependencies.BancoDados.CriarMySQL.outputs['ProvisarMySQL.DB_IP'] ]
-    MAVEN_CACHE_FOLDER: $(Pipeline.Workspace)/.m2/repository
-    MAVEN_OPTS: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
   jobs:
     - job: BuildTestApp
       displayName: "Build e Testes da Aplicação"
@@ -129,13 +131,13 @@ stages:
         - checkout: self
 
         - task: Cache@2
+          displayName: "Cache Maven local repo"
           inputs:
             key: 'maven | "$(Agent.OS)" | **/pom.xml'
             restoreKeys: |
               maven | "$(Agent.OS)"
               maven
             path: $(MAVEN_CACHE_FOLDER)
-          displayName: "Cache Maven local repo"
 
         - task: JavaToolInstaller@0
           displayName: "Instalar Java 21"
@@ -156,12 +158,8 @@ stages:
               echo "DB_IP obtida: $DB_IP"
               echo "##vso[task.setvariable variable=DB_IP;isOutput=true]$DB_IP"
 
-        - script: mvn install -B -e
-          workingDirectory: MottuFlow  
-          displayName: "Maven Install com cache"
-
         - task: Maven@4
-          displayName: "Build Maven com Testes e cache"
+          displayName: "Build Maven com Testes"
           env:
             DB_HOST: $(GetDBIP.DB_IP)
             DB_PORT: "3306"
@@ -171,19 +169,8 @@ stages:
             SERVER_PORT: "8080"
           inputs:
             mavenPomFile: "MottuFlow/pom.xml"
-            mavenOptions: '-Xmx3072m $(MAVEN_OPTS)'
             goals: "clean package -B"
-
-        - task: CopyFiles@2
-          displayName: "Copiar JAR para artefato"
-          inputs:
-            SourceFolder: "$(System.DefaultWorkingDirectory)/MottuFlow/target"
-            Contents: "*.jar"
-            TargetFolder: "$(Build.ArtifactStagingDirectory)"
-
-        - publish: $(Build.ArtifactStagingDirectory)
-          artifact: aplicacao
-          displayName: "Publicar artefato JAR"
+            mavenOptions: "$(MAVEN_OPTS)"
 
 # --------------------- Build Docker e Push ---------------------
 - stage: BuildDocker
@@ -299,6 +286,6 @@ stages:
               sleep 10
 
               APP_FQDN=$(az container show --resource-group $(RESOURCE_GROUP) --name $(ACI_APP_NAME) --query ipAddress.fqdn -o tsv)
-              echo "✅ Aplicação deployada com sucesso!"
-              echo "🌐 URL: http://$APP_FQDN:8080"
-              echo "##vso[task.setvariable variable=APP_URL]http://$APP_FQDN:8080"
+              echo "Aplicação deployada com sucesso!"
+              echo "URL: http://$APP_FQDN:8080"
+              echo "##vso[task.setvariable variable=APP_URL]http://$APP_FQDN:8080
